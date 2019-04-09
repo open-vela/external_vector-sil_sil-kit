@@ -41,10 +41,8 @@ target_link_libraries(IntegrationBus
     PRIVATE IbConfig
     PRIVATE IbMwComAdapter
 )
-set_target_properties(IntegrationBus
-    PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/
-)
+
+add_mvsc_ib_include_filter()
 
 #######################################################################################################################
 # Add to install targets of the IntegrationBus

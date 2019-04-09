@@ -5,7 +5,8 @@
 #include <thread>
 #include <future>
 
-#include "CreateComAdapter.hpp"
+#include "ComAdapter.hpp"
+#include "ComAdapter_impl.hpp"
 #include "ib/cfg/ConfigBuilder.hpp"
 #include "ib/sim/all.hpp"
 #include "ib/util/functional.hpp"
@@ -54,10 +55,10 @@ protected:
 
         ibConfig = cfgBuilder.Build();
         
-        pubComAdapter = CreateFastRtpsComAdapterImpl(ibConfig, "Sender");
+        pubComAdapter = std::make_unique<ComAdapter<FastRtpsConnection>>(ibConfig, "Sender");
         pubComAdapter->joinIbDomain(domainId);
 
-        subComAdapter = CreateFastRtpsComAdapterImpl(ibConfig, "Receiver");
+        subComAdapter = std::make_unique<ComAdapter<FastRtpsConnection>>(ibConfig, "Receiver");
         subComAdapter->joinIbDomain(domainId);
     }
 
@@ -107,8 +108,8 @@ protected:
 
     std::vector<Topic> topics;
 
-    std::unique_ptr<IComAdapterInternal> pubComAdapter;
-    std::unique_ptr<IComAdapterInternal> subComAdapter;
+    std::unique_ptr<ComAdapter<FastRtpsConnection>> pubComAdapter;
+    std::unique_ptr<ComAdapter<FastRtpsConnection>> subComAdapter;
 };
     
 TEST_F(IoMessageITest, receive_init_values)

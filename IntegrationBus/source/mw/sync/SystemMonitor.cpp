@@ -15,7 +15,6 @@ namespace sync {
 SystemMonitor::SystemMonitor(IComAdapter* comAdapter, cfg::SimulationSetup simulationSetup)
     : _comAdapter{comAdapter}
     , _simulationSetup{std::move(simulationSetup)}
-    , _logger{comAdapter->GetLogger()}
 {
     for (auto&& participant : _simulationSetup.participants)
     {
