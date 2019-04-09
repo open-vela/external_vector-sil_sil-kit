@@ -17,7 +17,6 @@
 #include "ib/sim/fr/FrDatatypes.hpp"
 
 namespace ib {
-//! The config namespace
 namespace cfg {
 
 struct Version
@@ -219,14 +218,13 @@ struct NetworkSimulator
 
 struct TimeSync
 {
-    //! FIXME: doxygen
     enum class SyncPolicy
     {
-        Loose, //!< There is no guarantee that data has been received before the next simulation cycle
-        Strict //!< Enforce that all sent data has been received before the next simulation cycle
+        Loose, //<! There is no guarantee that data has been received before the next simulation cycle
+        Strict //<! Enforce that all sent data has been received before the next simulation cycle
     };
-    SyncPolicy syncPolicy{SyncPolicy::Loose}; //!< FIXME: doxygen
-    std::chrono::nanoseconds tickPeriod{0}; //!< FIXME: doxygen
+    SyncPolicy syncPolicy{SyncPolicy::Loose};
+    std::chrono::nanoseconds tickPeriod{0};
 };
 
 struct SimulationSetup
@@ -369,7 +367,7 @@ inline auto get_by_name(T&& range, const std::string& name) -> decltype(*range.b
 {
     auto&& iter = find_by_name(std::forward<T>(range), name);
     if (iter == range.end())
-        throw ib::cfg::Misconfiguration{"Missing ConfigItem with name '" + name + "'"};
+        throw std::runtime_error("Missing ConfigItem with name '" + name + "'");
     else
         return *iter;
 }

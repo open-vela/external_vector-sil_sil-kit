@@ -43,7 +43,6 @@ void FastRtpsConnection::joinDomain(uint32_t domainId)
     {
         // Create participant based on profile specified in file
         auto configFilePath = _config.configPath + fastRtpsCfg.configFileName;
-        auto domainLock{FastRtps::GetFastRtpsDomainLock()};
         if (Domain::loadXMLProfilesFile(configFilePath))
         {
             participant = Domain::createParticipant(_participantName);
@@ -137,15 +136,15 @@ void FastRtpsConnection::joinDomain(uint32_t domainId)
             throw cfg::Misconfiguration{"Invalid FastRTPS configuration"};
         }
 
-        auto domainLock{FastRtps::GetFastRtpsDomainLock()};
         participant = Domain::createParticipant(pParam);
     }
 
     if (participant == nullptr)
         throw std::exception();
 
-    _fastRtpsParticipant = std::unique_ptr<eprosima::fastrtps::Participant, FastRtps::RemoveParticipant>(participant);
+    _fastRtpsParticipant.reset(participant);
 }
+
 
 void FastRtpsConnection::registerTopicTypeIfNecessary(TopicDataType* topicType)
 {
@@ -187,7 +186,7 @@ auto FastRtpsConnection::createPublisher(const std::string& topicName, TopicData
         SetupPubSubAttributes(pubAttributes, topicName, topicType);
 
         // We must configure the heartbeat period when using strict SyncPolicy because subscribers
-        // only send an acknowledgment in reply to a heartbeat. Thus, the heartbeat
+        // only send an acknowledgement in reply to a heartbeat. Thus, the hearbeat
         // period must be set to a shorter duration than the tickPeriod when using Strict
         // SyncPolicy. For Loose SyncPolicy, the FastRTPS default is sufficient.
         if (_config.simulationSetup.timeSync.syncPolicy == cfg::TimeSync::SyncPolicy::Strict)
