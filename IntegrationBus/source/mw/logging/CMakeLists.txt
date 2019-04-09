@@ -14,3 +14,5 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     PRIVATE IbInterface
 )
+
+add_mvsc_ib_include_filter()
