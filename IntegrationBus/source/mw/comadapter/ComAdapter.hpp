@@ -19,6 +19,7 @@
 
 // Add connection types here and make sure they are instantiated in ComAdapter.cpp
 #include "FastRtpsConnection.hpp"
+#include "VAsioConnection.hpp"
 
 
 namespace ib {
@@ -97,7 +98,6 @@ public:
     void SendIbMessage(EndpointAddress from, const sim::fr::CycleStart& msg) override;
     void SendIbMessage(EndpointAddress from, const sim::fr::HostCommand& msg) override;
     void SendIbMessage(EndpointAddress from, const sim::fr::ControllerConfig& msg) override;
-    void SendIbMessage(EndpointAddress from, const sim::fr::TxBufferConfigUpdate& msg) override;
     void SendIbMessage(EndpointAddress from, const sim::fr::TxBufferUpdate& msg) override;
     void SendIbMessage(EndpointAddress from, const sim::fr::ControllerStatus& msg) override;
 
@@ -148,6 +148,9 @@ public:
 
     void Run() override { _ibConnection.Run(); }
     void Stop() override { _ibConnection.Stop(); }
+
+    // For Testing Purposes:
+    inline auto GetIbConnection() -> IbConnectionT& { return _ibConnection; }
 
 private:
     // ----------------------------------------
