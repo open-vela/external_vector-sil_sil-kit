@@ -40,12 +40,6 @@ bool operator==(const FrSymbol& lhs, const FrSymbol& rhs)
         && lhs.pattern == rhs.pattern;
 }
 
-bool operator==(const TxBufferConfigUpdate& lhs, const TxBufferConfigUpdate& rhs)
-{
-    return lhs.txBufferIndex == rhs.txBufferIndex
-        && lhs.txBufferConfig == rhs.txBufferConfig;
-}
-
 bool operator==(const TxBufferUpdate& lhs, const TxBufferUpdate& rhs)
 {
     return lhs.txBufferIndex == rhs.txBufferIndex

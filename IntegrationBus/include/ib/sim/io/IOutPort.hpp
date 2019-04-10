@@ -11,11 +11,6 @@ namespace ib {
 namespace sim {
 namespace io {
 
-/*!
-* \brief Out-Port implementation.
-*
-* \tparam MsgT The I/O message type.
-*/
 template<typename MsgT>
 class IOutPort
 {
@@ -30,7 +25,7 @@ public:
     //! \brief Get the config struct used to setup this IOutPort
     virtual auto Config() const -> const ConfigType& = 0;
 
-    /*! \brief Write a new IO value to the port
+    /*! \ Write a new IO value to the port
      *
      * Value and timestamp are combined to an IO message that is sent
      * via the connected \ref ib::mw::IComAdapter
@@ -45,13 +40,9 @@ public:
     virtual auto Read() const -> const ValueType& = 0;
 };
 
-//! \brief IOutPort for DigitalIoMessage
 using IDigitalOutPort = IOutPort<DigitalIoMessage>;
-//! \brief IOutPort for AnalogIoMessage
 using IAnalogOutPort  = IOutPort<AnalogIoMessage>;
-//! \brief IOutPort for PwmIoMessage
 using IPwmOutPort     = IOutPort<PwmIoMessage>;
-//! \brief IOutPort for PatternIoMessage
 using IPatternOutPort = IOutPort<PatternIoMessage>;
 
 } // namespace io

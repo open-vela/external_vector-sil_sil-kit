@@ -102,8 +102,6 @@ private:
 private:
     // ----------------------------------------
     // private methods
-    template<typename... Args>
-    static auto CreateFastrtpsParticipant(Args&&... args) -> eprosima::fastrtps::Participant*;
     void registerTopicTypeIfNecessary(eprosima::fastrtps::TopicDataType* topicType);
     template <class AttrT>
     void SetupPubSubAttributes(AttrT& attributes, const std::string& topicName, eprosima::fastrtps::TopicDataType* topicType);
@@ -153,7 +151,6 @@ private:
         RtpsTopics<sim::fr::idl::CycleStart>,
         RtpsTopics<sim::fr::idl::HostCommand>,
         RtpsTopics<sim::fr::idl::ControllerConfig>,
-        RtpsTopics<sim::fr::idl::TxBufferConfigUpdate>,
         RtpsTopics<sim::fr::idl::TxBufferUpdate>,
         RtpsTopics<sim::fr::idl::ControllerStatus>,
         RtpsTopics<sim::lin::idl::LinMessage>,
