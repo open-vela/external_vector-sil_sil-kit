@@ -2,24 +2,22 @@ add_library(IbMwComAdapter STATIC
     ComAdapter.hpp
     ComAdapter_impl.hpp
     ComAdapter.cpp
-    IComAdapter_internal.hpp
-    CreateComAdapter.hpp
-    CreateComAdapter.cpp
 )
 
 target_link_libraries(IbMwComAdapter
     PUBLIC  IbInterface
     PUBLIC  IbMwLogging
     PUBLIC  IbMwFastRtps
-    PUBLIC  IbConfig
-    PUBLIC  IbUtil
-    PUBLIC  IbMwSync
-    PUBLIC  IbSimCan
-    PUBLIC  IbSimEthernet
-    PUBLIC  IbSimFlexRay
-    PUBLIC  IbSimLin
-    PUBLIC  IbSimIO
-    PUBLIC  IbSimGenericMessage
+    PUBLIC  IbMwVAsio
+    PRIVATE IbConfig
+    PRIVATE IbUtil
+    PRIVATE IbMwSync
+    PRIVATE IbSimCan
+    PRIVATE IbSimEthernet
+    PRIVATE IbSimFlexRay
+    PRIVATE IbSimLin
+    PRIVATE IbSimIO
+    PRIVATE IbSimGenericMessage
 )
 
 target_include_directories(IbMwComAdapter
@@ -30,4 +28,17 @@ if (MSVC)
     target_compile_options(IbMwComAdapter PRIVATE "/bigobj")
 endif (MSVC)
 
-add_vib_test(TestMwComAdapter SOURCES ComAdapterTest.cpp LIBS IbMwMock)
+add_mvsc_ib_include_filter()
+
+add_vib_test(TestMwComAdapter SOURCES ComAdapterTest.cpp LIBS
+    IbMwComAdapter
+    IbConfig
+    IbUtil
+    IbMwSync
+    IbSimCan
+    IbSimEthernet
+    IbSimFlexRay
+    IbSimLin
+    IbSimIO
+    IbSimGenericMessage
+)

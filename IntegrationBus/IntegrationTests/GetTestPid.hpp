@@ -11,12 +11,11 @@
     }
 
 #else // hopefully a posix OS
-//FIXME: with Fast-RTPS 1.8.1 on ubuntu 18.04 the generated domain IDs
-// were too high: we're now clamping the returned value to [0,232]
+
     #include <unistd.h>
     inline auto GetTestPid()
     {
-        return getpid() & 232;
+        return getpid();
     }
     
 #endif
