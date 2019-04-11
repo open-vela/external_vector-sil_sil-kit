@@ -1,18 +1,6 @@
-add_library(IbMwMock STATIC
-    MockComAdapter.hpp
-    NullConnectionComAdapter.cpp
-    NullConnectionComAdapter.hpp
-)
+add_library(IbMwMock INTERFACE)
 
 target_include_directories(IbMwMock
-    INTERFACE ${CMAKE_CURRENT_LIST_DIR}
+    INTERFACE .
 )
-
-target_link_libraries(IbMwMock
-    IbMwComAdapter
-)
-
-if (MSVC)
-    target_compile_options(IbMwMock PRIVATE "/bigobj")
-endif (MSVC)
 

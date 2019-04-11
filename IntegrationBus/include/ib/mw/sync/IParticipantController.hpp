@@ -23,22 +23,20 @@ public:
 public:
     /*! \brief Register a callback to perform initialization.
      *
-     * The handler is called when an \ref ParticipantCommand::Kind::Initialize
-     * or \ref ParticipantCommand::Kind::ReInitialize has been received.
-     * The callback is executed in the context of the middleware
-     * thread that received the command.
-     * After the handler has been processed, the participant
-     * switches to the \ref ParticipantState::Initialized state.
+     * The handler is called when an /Initialize/ or /ReInitialize/
+     * command has been received. The callback is executed in the
+     * context of the middleware thread that received the
+     * command. After the handler has been processed, the participant
+     * switches to the /Initialized/ state.
      */
     virtual void SetInitHandler(InitHandlerT handler) = 0;
 
     /*! \brief Register a callback that is executed on simulation stop.
      *
-     * The handler is called when a \ref SystemCommand::Kind::Stop has been
+     * The handler is called when a /Stop/ ommand has been
      * received. It is executed in the context of the middleware
      * thread that received the command. After the handler has been
-     * processed, the participant switches to the
-     * \ref ParticipantState::Stopped state.
+     * processed, the participant switches to the /Stopped/ state.
      * 
      * Throwing an error inside the handler will cause a call to
      * ReportError().
@@ -47,11 +45,11 @@ public:
 
     /*! \brief Register a callback that is executed on simulation shutdown.
      *
-     * The handler is called when the \ref SystemCommand::Kind::Shutdown
-     * has been received. It is executed in the context of the middleware
+     * The handler is called when the /Shutdown/ ommand has been
+     * received. It is executed in the context of the middleware
      * thread that received the command. After the handler has been
-     * processed, the participant switches to the
-     * \ref ParticipantState::Shutdown state and is allowed to terminate.
+     * processed, the participant switches to the /Shutdown/ state and
+     * is allowed to terminate.
      * 
      * Throwing an error inside the handler will cause a call to
      * ReportError().
@@ -71,8 +69,8 @@ public:
 
     /*! \brief Enable coldswap for this participant
      *
-     * With coldswap enabled, Run() / RunAsync() will finish in state
-     * \ref ParticipantState::ColdswapShutdown to indicate that it is
+     * With coldswap enabled, Run()/RunAsyc() will finish in state
+     * ParticipantState::ColdswapShutdown to indicate that it is
      * now safe to disconnect and reconnect.
      *
      * By default, coldswap is disabled, and the participant will
@@ -98,7 +96,7 @@ public:
      * task is executed in the context of the calling thread.
      *
      * \return Final state of the participant. In normal operation,
-     * this should be \ref ParticipantState::Shutdown.
+     * should be ParticipantState::Shutdown.
      */
     virtual auto Run() -> ParticipantState = 0;
 
@@ -108,9 +106,8 @@ public:
      * task is executed in the context of the middleware thread that
      * receives the grant or tick.
      *
-     * NB: RunAsync() cannot be used with
-     * \ref ib::cfg::TimeSync::SyncPolicy::Strict,
-     * which will inherently lead to a deadlock!
+     * NB: RunAsync() cannot be used with SyncPolicy::Strict, which
+     * will inherently lead to a deadlock!
      * 
      * \return Future that will hold the final state of the participant
      * once the ParticipantController finishes operation.
@@ -119,27 +116,27 @@ public:
 
     /*! \brief Abort current simulation run due to an error.
      *
-     * Switch to the \ref ParticipantState::Error state and
-     * report the error message in the IB system.
+     * Switch to the /Error/ state and report the error message in the
+     * IB system.
      */
     virtual void ReportError(std::string errorMsg) = 0;
 
     /*! \brief Pause execution of the participant
      *
-     * Switch to \ref ParticipantState::Paused due to the provided \p reason.
+     * Switch to the Paused state due to the provided \param
+     * reason.
      *
-     * When a client is in state \ref ParticipantState::Paused,
-     * it must not be considered as unresponsive even if a
-     * health monitoring related timeout occurs.
+     * When a client is in state Paused, it must not be considered as
+     * unresponsive even if a health monitoring related timeout
+     * occurs.
      *
-     * Precondition: State() == \ref ParticipantState::Running
+     * Precondition: State() == ParticipantState::Running
      */
     virtual void Pause(std::string reason) = 0;
 
-    /*! \brief Switch back to \ref ParticipantState::Running
-     * after having paused.
+    /*! \brief Switch back to Running after having paused.
      *
-     * Precondition: State() == \ref ParticipantState::Paused
+     * Precondition: State() == ParticipantState::Paused
      */
     virtual void Continue() = 0;
     
@@ -148,15 +145,14 @@ public:
      * Allows the participant to exit the RunAsync loop, e.g., if it
      * is unable to further progress its simulation.
      * 
-     * Calls the StopHandler and then switches to the
-     * \ref ParticipantState::Stopped state.
+     * Calls the StopHandler and then switches to the /Stopped/ state.
      *
      * NB: In general, Stop should not be called by the participants
      * as the end of simulation is governed by the central execution
      * controller. This method should only be used if the client
-     * cannot participate in the system simulation anymore.
+     * cannot participante in the system simulation anymore.
      *
-     * Precondition: State() == \ref ParticipantState::Running
+     * Precondition: State() == ParticipantState::Running
      */
     virtual void Stop(std::string reason) = 0;
 
