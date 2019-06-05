@@ -82,127 +82,20 @@ addTestProject()
 #######################################################################################################################
 # Middleware
 #######################################################################################################################
-set(IB_BIN_FASTRTPS_VERSION 1.8.1)
-set(IB_BIN_FASTRTPS_REPOSITORY ) #default: must be user set!
-option(IB_BIN_FASTRTPS_ENABLE
-        "Fetch pre-built and packaged FastRTPS/fastcdr binaries "
-        " (set IB_BIN_FASTRTPS_REPOSITORY for download URL)"
+
+#add_subdirectory(${THIRDPARTY_DIR}/Fast-RTPS/thirdparty/fastcdr
+#    ThirdParty/fastcdr
+#    EXCLUDE_FROM_ALL
+#)
+option(THIRDPARTY_fastcdr "Activate the use of Fast-RTPS internal thirdparty fastcdr" ON)
+option(THIRDPARTY_Asio "Activate the use of Fast-RTPS internal thirdparty Asio" ON)
+option(TINYXML2_FROM_SOURCE "Integrate TinyXML2 source code inside Fast RTPS" ON)
+option(THIRDPARTY_TinyXML2 "Activate the use of Fast-RTPS internal thirdparty TinyXML2" ON)
+
+add_subdirectory(${THIRDPARTY_DIR}/Fast-RTPS
+    ThirdParty/Fast-RTPS
+    EXCLUDE_FROM_ALL
 )
-
-if(IB_BIN_FASTRTPS_ENABLE)
-    include(get_compiler_arch)
-    include(GetExternalProject)
-    get_compiler_arch(_comp _arch _plat)
-    if(${_plat} MATCHES "Linux" )
-        get_ubuntu_version(ubuntu)
-        set(_plat "ubuntu${ubuntu}")
-    endif()
-    set(binname "fastrtps-${IB_BIN_FASTRTPS_VERSION}-${_plat}-${_comp}")
-    if(NOT IB_BIN_FASTRTPS_REPOSITORY)
-        message(FATAL_ERROR 
-            "You have to set IB_BIN_FASTRTPS_REPOSITORY to an URL serving"
-            " the fastrtps zip file named \"${binname}-$<CONFIG>.zip\"."
-            " To override the version set IB_BIN_FASTRTPS_VERSION."
-            )
-    endif()
-    message(STATUS "NOTE: using pre-build fastrtps/fastcdr")
-    set(FASTRTPS_BIN_DIR ${CMAKE_BINARY_DIR}/fastrtps-${IB_BIN_FASTRTPS_VERSION})
-    get_external_project(fastrtps-release
-        URL ${IB_BIN_FASTRTPS_REPOSITORY}/${binname}-Release.zip
-        WORKING_DIR ${CMAKE_BINARY_DIR}/fastrtps-download/work-Release
-        SOURCE_DIR  ${CMAKE_BINARY_DIR}/fastrtps-download/Release #will be extracted here, deletes existing
-        INSTALL_COMMAND   
-            "${CMAKE_COMMAND}" -E copy_directory 
-            ${CMAKE_BINARY_DIR}/fastrtps-download/Release ${FASTRTPS_BIN_DIR}
-        )
-    get_external_project(fastrtps-debug
-        URL ${IB_BIN_FASTRTPS_REPOSITORY}/${binname}-Debug.zip
-        WORKING_DIR ${CMAKE_BINARY_DIR}/fastrtps-download/work-Debug
-        SOURCE_DIR  ${CMAKE_BINARY_DIR}/fastrtps-download/Debug 
-        INSTALL_COMMAND
-            "${CMAKE_COMMAND}" -E copy_directory 
-            ${CMAKE_BINARY_DIR}/fastrtps-download/Debug ${FASTRTPS_BIN_DIR}
-        )
-    #NB the fastcdr-config.cmake explicitly checks for fastcdr_BIN_DIR
-    #   but we have static builds pre-compiled with no */bin folder
-    set(fastcdr_BIN_DIR ${FASTRTPS_BIN_DIR}/bin 
-            CACHE STRING "override vendor package config logic" FORCE)
-    set(fastrtps_BIN_DIR ${fastcdr_BIN_DIR}
-            CACHE STRING "override vendor package config logic" FORCE)
-    file(MAKE_DIRECTORY ${fastrtps_BIN_DIR})
-    find_package(fastcdr CONFIG
-        REQUIRED
-        PATHS ${FASTRTPS_BIN_DIR}
-        )
-    find_package(fastrtps CONFIG
-        REQUIRED
-        PATHS ${FASTRTPS_BIN_DIR}
-        )
-    message(STATUS "bundling fastrtps-${IB_BIN_FASTRTPS_VERSION} from ${FASTRTPS_BIN_DIR}")
-    install(DIRECTORY
-            ${FASTRTPS_BIN_DIR}
-            DESTINATION
-            ThirdParty/bin
-     )
-else()
-    ### build from submodule or fetch sources from external mirror or use pre-built binaries (deployed mode)
-    option(THIRDPARTY_fastcdr "Activate the use of Fast-RTPS internal thirdparty fastcdr" ON)
-    option(THIRDPARTY_Asio "Activate the use of Fast-RTPS internal thirdparty Asio" ON)
-    option(TINYXML2_FROM_SOURCE "Integrate TinyXML2 source code inside Fast RTPS" ON)
-    option(THIRDPARTY_TinyXML2 "Activate the use of Fast-RTPS internal thirdparty TinyXML2" ON)
-    if(EXISTS ${THIRDPARTY_DIR}/Fast-RTPS/CMakeLists.txt)
-        #local source tree -- we export this as binary packages
-        message(STATUS "Building Fast-RTPS from local submodule")
-        add_subdirectory(${THIRDPARTY_DIR}/Fast-RTPS
-            ThirdParty/Fast-RTPS
-            EXCLUDE_FROM_ALL
-        )
-    elseif(TARGET fastcdr AND TARGET fastrtps)
-        # the binary targets have already been defined in the deployed top-level CMakeLists
-        message(STATUS "fastcdr and fastrtps targets are already defined")
-    else()
-        message("--------------------------------------------------------------------")
-        message("--           Fetching missing Fast-RTPS sources via git")
-        message("--------------------------------------------------------------------")
-        set(FASTRTPS_URL "https://github.com/eProsima/Fast-RTPS")
-        set(FASTRTPS_TAG "release/${IB_BIN_FASTRTPS_VERSION}")
-
-        if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_LESS "3.11")
-            message("-- Using fallback for old cmake < 3.11")
-            if(NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/external_fastrtps/CMakeLists.txt)
-                find_package(Git REQUIRED)
-                execute_process(
-                    COMMAND "${GIT_EXECUTABLE}" clone -b "${FASTRTPS_TAG}" 
-                            --recurse-submodules "${FASTRTPS_URL}" ${CMAKE_CURRENT_BINARY_DIR}/external_fastrtps
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                    RESULT_VARIABLE gitErr
-                )
-                if( NOT "${gitErr}" EQUAL "0")
-                    message(FATAL_ERROR "ERROR: git subprocess failed with status: ${gitErr}")
-                endif()
-            endif()
-            add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/external_fastrtps
-                ThirdParty/Fast-RTPS
-                EXCLUDE_FROM_ALL
-            )
-
-        else()
-            include(FetchContent)
-            FetchContent_Declare(extern-fastrtps
-                GIT_REPOSITORY ${FASTRTPS_URL}
-                GIT_TAG ${FASTRTPS_TAG}
-            )
-            FetchContent_GetProperties(extern-fastrtps)
-            if(NOT extern-fastrtps_POPULATED)
-                FetchContent_Populate(extern-fastrtps)
-                add_subdirectory(${extern-fastrtps_SOURCE_DIR}
-                    ThirdParty/Fast-RTPS
-                    EXCLUDE_FROM_ALL
-                )
-            endif()
-        endif()
-    endif()
-endif(IB_BIN_FASTRTPS_ENABLE)
 
 #######################################################################################################################
 # Logging
@@ -236,6 +129,15 @@ set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR_backup}")
 #######################################################################################################################
 # Helper Functions
 #######################################################################################################################
+
+# Add IntegrationBus Headers to VS Projects
+function(add_mvsc_ib_include_filter)
+    if(CMAKE_VERSION VERSION_GREATER 3.8.0)
+        # Easy access to IntegrationBus includes for Visual Studio
+        file(GLOB_RECURSE IB_INCLUDES_ALL ${IB_PROJECT_DIR}/include/ib/*.hpp)
+        source_group(TREE ${IB_PROJECT_DIR}/include/ib PREFIX "Header Files (IB)" FILES ${IB_INCLUDES_ALL})
+    endif()
+endfunction(add_mvsc_ib_include_filter)
 
 function(add_vib_test)
     set(multiValueArgs SOURCES LIBS CONFIGS)
@@ -290,7 +192,8 @@ function(add_vib_test)
              WORKING_DIRECTORY $<TARGET_FILE_DIR:${executableName}>
     )
 
-endfunction(add_vib_test)
+    add_mvsc_ib_include_filter()
+endfunction(add_ib_test)
 
 include(CTest)
 
@@ -393,8 +296,6 @@ install(
     COMPONENT IntegrationBus-Developer
     # Rational: Fast-RTPS cannot be delivered from source, as it requires its own submodules to be actual Git repositories.
     REGEX "/ThirdParty/Fast-RTPS" EXCLUDE
-    # Breathe is just required for generating the documentation
-    REGEX "/ThirdParty/Breathe" EXCLUDE
 )
 # Instead of the Fast-RTPS library, deploy a script to clone Fast-RTPS. 
 # It should only be used from package deployments, thus the '.in' disguise.
