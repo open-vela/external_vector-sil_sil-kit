@@ -1,6 +1,7 @@
 // Copyright (c) Vector Informatik GmbH. All rights reserved.
 
-#include "NullConnectionComAdapter.hpp"
+#include "ComAdapter.hpp"
+#include "ComAdapter_impl.hpp"
 #include "ib/cfg/ConfigBuilder.hpp"
 #include "CanController.hpp"
 #include "FrControllerProxy.hpp"
@@ -15,6 +16,25 @@ namespace {
 
 using namespace ib::mw;
 using namespace ib::cfg;
+
+struct MockIbConnection
+{
+    MockIbConnection(Config /*config*/, std::string /*participantName*/) {};
+
+    void joinDomain(uint32_t /*domainId*/) {};
+
+    template<class IbServiceT>
+    inline void RegisterIbService(const std::string& /*topicName*/, EndpointId /*endpointId*/, IbServiceT* /*receiver*/) {};
+
+    template<typename IbMessageT>
+    void SendIbMessageImpl(EndpointAddress /*from*/, IbMessageT&& /*msg*/) {};
+
+    void WaitForMessageDelivery() {};
+    void FlushSendBuffers() {};
+
+    void Run() {};
+    void Stop() {};
+};
 
 class ComAdapterTest : public testing::Test
 {
@@ -44,9 +64,9 @@ TEST_F(ComAdapterTest, make_basic_controller)
 
     auto config = configBuilder.Build();
 
-    auto comAdapter = CreateNullConnectionComAdapterImpl(config, participantName);
+    ComAdapter<MockIbConnection> comAdapter(config, participantName);
 
-    auto* canController = comAdapter->CreateCanController(controllerName);
+    auto* canController = comAdapter.CreateCanController(controllerName);
 
     auto basicCanController = dynamic_cast<ib::sim::can::CanController*>(canController);
 
@@ -73,9 +93,9 @@ TEST_F(ComAdapterTest, make_network_controller)
 
     auto config = configBuilder.Build();
 
-    auto comAdapter = CreateNullConnectionComAdapterImpl(config, participantName);
+    ComAdapter<MockIbConnection> comAdapter(config, participantName);
 
-    auto* frController = comAdapter->CreateFlexrayController(controllerName);
+    auto* frController = comAdapter.CreateFlexrayController(controllerName);
 
     auto networkFrController = dynamic_cast<ib::sim::fr::FrControllerProxy*>(frController);
 
@@ -108,10 +128,10 @@ TEST_F(ComAdapterTest, make_basic_and_network_controller)
 
     auto config = configBuilder.Build();
 
-    auto comAdapter = CreateNullConnectionComAdapterImpl(config, "P1");
+    ComAdapter<MockIbConnection> comAdapter(config, "P1");
 
-    auto* canController = comAdapter->CreateCanController("CAN1");
-    auto* frController = comAdapter->CreateFlexrayController("FR1");
+    auto* canController = comAdapter.CreateCanController("CAN1");
+    auto* frController = comAdapter.CreateFlexrayController("FR1");
 
     auto basicCanController = dynamic_cast<ib::sim::can::CanController*>(canController);
     auto networkFrController = dynamic_cast<ib::sim::fr::FrControllerProxy*>(frController);

@@ -448,12 +448,6 @@ void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::f
 }
 
 template <class IbConnectionT>
-void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::fr::TxBufferConfigUpdate& msg)
-{
-    SendIbMessageImpl(from, msg);
-}
-
-template <class IbConnectionT>
 void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::fr::TxBufferUpdate& msg)
 {
     SendIbMessageImpl(from, msg);
