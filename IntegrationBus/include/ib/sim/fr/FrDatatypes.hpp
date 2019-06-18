@@ -274,15 +274,6 @@ struct ControllerConfig
     std::vector<TxBufferConfig> bufferConfigs;
 };
 
-//! Update the configuration of a particular FlexRay TX-Buffer
-struct TxBufferConfigUpdate
-{
-    //! Index of the TX-Buffers according to the configured buffers (cf. ControllerConfig)
-    uint16_t txBufferIndex;
-    //! The new configuration of the Tx-Buffer
-    TxBufferConfig txBufferConfig;
-};
-
 //! Update the content of a FlexRay TX-Buffer
 struct TxBufferUpdate
 {

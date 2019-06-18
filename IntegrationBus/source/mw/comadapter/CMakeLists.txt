@@ -29,7 +29,7 @@ endif (MSVC)
 
 add_mvsc_ib_include_filter()
 
-add_vib_test(TestMwComAdapter SOURCES ComAdapterTest.cpp LIBS
+make_gtest(TestMwComAdapter ComAdapterTest.cpp
     IbMwComAdapter
     IbConfig
     IbUtil
