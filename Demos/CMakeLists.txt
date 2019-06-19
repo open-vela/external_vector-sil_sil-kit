@@ -170,7 +170,6 @@ add_subdirectory(ConfigBuilder)
 add_subdirectory(SystemMonitor)
 add_subdirectory(SystemController)
 add_subdirectory(SystemControllerInteractive)
-add_subdirectory(GenericMessageITest)
 
 #######################################################################################################################
 # VisualStudio specific setup
