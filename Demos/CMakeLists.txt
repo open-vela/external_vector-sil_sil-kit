@@ -54,10 +54,7 @@ function(make_ib_demo executableName demoSourceFile)
     remove_definitions(-DEXPORT_IntegrationBusAPI)
     
     # Group this demo project into a folder
-    set_target_properties(${executableName} PROPERTIES
-        FOLDER "Demos"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Demos/$<CONFIG>/bin"
-        )
+    set_property(TARGET ${executableName} PROPERTY FOLDER "Demos")
 
     target_link_libraries(${executableName}
         PRIVATE IntegrationBus
@@ -173,7 +170,6 @@ add_subdirectory(ConfigBuilder)
 add_subdirectory(SystemMonitor)
 add_subdirectory(SystemController)
 add_subdirectory(SystemControllerInteractive)
-add_subdirectory(GenericMessageITest)
 
 #######################################################################################################################
 # VisualStudio specific setup
