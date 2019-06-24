@@ -5,9 +5,7 @@
 #include <thread>
 #include <future>
 
-#include "ComAdapter.hpp"
-#include "ComAdapter_impl.hpp"
-#include "ib/cfg/ConfigBuilder.hpp"
+#include "ib/IntegrationBus.hpp"
 #include "ib/sim/all.hpp"
 #include "ib/util/functional.hpp"
 
@@ -19,7 +17,6 @@
 namespace {
 
 using namespace std::chrono_literals;
-using namespace ib::mw;
 
 using testing::_;
 using testing::A;
@@ -43,11 +40,8 @@ protected:
 
         ibConfig = cfgBuilder.Build();
         
-        pubComAdapter = std::make_unique<ComAdapter<FastRtpsConnection>>(ibConfig, "Sender");
-        pubComAdapter->joinIbDomain(domainId);
-
-        subComAdapter = std::make_unique<ComAdapter<FastRtpsConnection>>(ibConfig, "Receiver");
-        subComAdapter->joinIbDomain(domainId);
+        pubComAdapter = ib::CreateFastRtpsComAdapter(ibConfig, "Sender", domainId);
+        subComAdapter = ib::CreateFastRtpsComAdapter(ibConfig, "Receiver", domainId);
     }
 
 
@@ -76,8 +70,8 @@ protected:
 
     std::promise<bool> testOk;
 
-    std::unique_ptr<ComAdapter<FastRtpsConnection>> pubComAdapter;
-    std::unique_ptr<ComAdapter<FastRtpsConnection>> subComAdapter;
+    std::unique_ptr<ib::mw::IComAdapter> pubComAdapter;
+    std::unique_ptr<ib::mw::IComAdapter> subComAdapter;
 };
     
 TEST_F(CatchExceptionsInCallbacksITest, please_dont_crash)
