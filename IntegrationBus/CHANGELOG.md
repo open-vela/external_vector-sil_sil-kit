@@ -37,6 +37,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ### Added
 ### Removed
 ### Changed
+### Fixed
+### Interface compatibility with Sprint-27:
+* Application binary interface (ABI): Yes/No
+* Application software interface (API): Yes/No
+* Application middleware interface: Yes/No
+
+## [Sprint-27] - 2019-06-19
+### Added
+### Removed
+### Changed
 - NetworkSimulator VIBE is now only used for configured links. For all other links, 
   the trivial simulation is used.
 
