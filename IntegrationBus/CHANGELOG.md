@@ -3,13 +3,57 @@ All notable changes to the IntegrationBus project shall be documented in this fi
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2019-??-??
+## [Sprint-29] - 2019-07-17
+### Added
+### Removed
+### Changed
+### Fixed
+
+### Interface compatibility with Sprint-28:
+* Application binary interface (ABI): Yes/No
+* Application software interface (API): Yes/No
+* Application middleware interface: Yes/No
+
+## [Sprint-28] - 2019-07-03
+### Added
+- New demo that shows how integration tests can be written for the Vector Integration Bus.
+### Removed
+### Changed
+### Fixed
+- IbLauncher can now be started from every directory location on Linux and Windows. The global
+  IntegrationBus-BinPath and IntegrationBus-LibPath are now set to absolute paths inside the
+  IbLauncher project. Furthermore, the IbLauncher shell script now sets absolute paths for the bin
+  and lib path.
+- FastRTPS socket buffer sizes now use default values when not set in IbConfig. This could lead to
+  random socket buffer sizes in release builds.
+- VIB integration tests now can be launched directly from the Visual Studio test runner.
+
+### Interface compatibility with Sprint-27:
+* Application binary interface (ABI): Yes
+* Application software interface (API): Yes
+* Application middleware interface: Yes
+
+## [Sprint-27] - 2019-06-19
 ### Added
 ### Removed
 ### Changed
 - NetworkSimulator VIBE is now only used for configured links. For all other links, 
   the trivial simulation is used.
+
 ### Fixed
+- The IB Launcher will now work if installed in a path containing spaces.
+- The FlexRay configuration will now use strings to represent the enumeration values of pChannels,
+  pWakeupChannel, and pdMicrotick, as well as channels and transmissionMode for the TxBuffers. The
+  new valid values are:
+    * Channels: "A", B", or "AB"
+    * pdMicrotick: "12.5ns", "25ns", or "50ns"
+    * transmissionMode: "Continuous" or "SingleShot"
+
+### Interface compatibility with previous version:
+* Application binary interface (ABI): No
+* Application software interface (API): Yes
+* Application middleware interface: Yes
+
 
 ## [Sprint-26] - 2019-05-29
 ### Added
