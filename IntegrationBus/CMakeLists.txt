@@ -139,65 +139,61 @@ function(add_mvsc_ib_include_filter)
     endif()
 endfunction(add_mvsc_ib_include_filter)
 
-# Generate Gtest Project
-function(make_gtest executableName testSourceFile)
-    add_executable(${executableName}
-        ${testSourceFile}
+function(add_vib_test)
+    set(multiValueArgs SOURCES LIBS CONFIGS)
+
+    cmake_parse_arguments(PARSED_ARGS
+        ""
+        ""
+        "${multiValueArgs}"
+        ${ARGN}
     )
-    
+
+    if(NOT PARSED_ARGS_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "add_ib_test function failed because no executable name was specified (UNPARSED_ARGUMENTS were empty).")
+    endif()
+
+    list(GET PARSED_ARGS_UNPARSED_ARGUMENTS 0 executableName)
+
+    if(NOT PARSED_ARGS_SOURCES)
+        message(FATAL_ERROR "add_ib_test function for ${executableName} has an empty source list.")
+    endif()
+
+    add_executable(${executableName}
+        ${PARSED_ARGS_SOURCES}
+    )
+
     set_property(TARGET ${executableName} PROPERTY FOLDER "Tests")
 
     target_link_libraries(${executableName}
         PRIVATE IbInterface
         gtest
         gmock_main
-        ${ARGV2} ${ARGV3} ${ARGV4} ${ARGV5}
-        ${ARGV6} ${ARGV7} ${ARGV8} ${ARGV9}
-        ${ARGV10} ${ARGV11} ${ARGV12} ${ARGV13}
+        ${PARSED_ARGS_LIBS}
     )
+
+    foreach(config ${PARSED_ARGS_CONFIGS})
+        get_filename_component(configFileName ${config} NAME)
+        add_custom_command(
+            TARGET ${executableName} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/${config} $<TARGET_FILE_DIR:${executableName}>/${configFileName}
+        )
+    endforeach()
 
     if (MSVC)
         target_compile_options(${executableName} PRIVATE "/bigobj")
-    endif (MSVC)
-    if(NOT MSVC)
+	else()
         target_compile_options(${executableName} PUBLIC "-Wno-inconsistent-missing-override")
-    endif()
+    endif(MSVC)
 
-    add_test(${executableName} ${executableName} --gtest_output=xml:${executableName}_gtestresults.xml)
-  
-    add_mvsc_ib_include_filter()
-endfunction(make_gtest)
-
-set(make_integration_test_caller_dir ${CMAKE_CURRENT_LIST_DIR} CACHE INTERNAL "")
-
-function(make_integration_test testName)
-    set(executableName ITest${testName})
-    
-    add_executable(${executableName}
-        ${testName}ITest.cpp
-        )
-
-    set_property(TARGET ${executableName} PROPERTY FOLDER "Tests")
-
-    target_link_libraries(${executableName}
-        PRIVATE IbInterface
-        PRIVATE IntegrationBus
-        gtest
-        gmock_main
-        )
-
-    if(NOT MSVC)
-        target_compile_options(${executableName} PUBLIC "-Wno-inconsistent-missing-override")
-    endif()
-
-    add_test(
-        NAME ${executableName}
-        COMMAND ${CMAKE_COMMAND} -DPATH=$<TARGET_FILE_DIR:IntegrationBus>\;$<TARGET_FILE_DIR:fastrtps>\;$<TARGET_FILE_DIR:fastcdr> -P ${make_integration_test_caller_dir}/cmake/GTestRunner.cmake $<TARGET_FILE:${executableName}>
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        )
+    add_test(NAME ${executableName}
+             COMMAND ${executableName} --gtest_output=xml:${executableName}_gtestresults.xml
+             WORKING_DIRECTORY $<TARGET_FILE_DIR:${executableName}>
+    )
 
     add_mvsc_ib_include_filter()
-endfunction(make_integration_test executableName)
+endfunction(add_ib_test)
 
 include(CTest)
 
