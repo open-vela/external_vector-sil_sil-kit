@@ -3,19 +3,37 @@ All notable changes to the IntegrationBus project shall be documented in this fi
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] - 2019-??-??
+## [Sprint-29] - 2019-07-17
 ### Added
+- It is now possible to reconfigure FlexRay TX-Buffers during the simulation, e.g., to change offset
+  and repetition. Cf., IFrController::ReconfigureTxBuffer(uint16_t, const TxBufferConfig&)
 ### Removed
 ### Changed
 ### Fixed
-- IbLauncher can now be started from every directory location on Linux and Windows. The global 
-IntegrationBus-BinPath and IntegrationBus-LibPath are now set to absolute paths inside the IbLauncher
-project. Furthermore, the IbLauncher shell script now sets absolute paths for the bin and lib path.
 
-### Interface compatibility with Sprint-27:
-* Application binary interface (ABI): Yes/No
+### Interface compatibility with Sprint-28:
+* Application binary interface (ABI): No
 * Application software interface (API): Yes/No
 * Application middleware interface: Yes/No
+
+## [Sprint-28] - 2019-07-03
+### Added
+- New demo that shows how integration tests can be written for the Vector Integration Bus.
+### Removed
+### Changed
+### Fixed
+- IbLauncher can now be started from every directory location on Linux and Windows. The global
+  IntegrationBus-BinPath and IntegrationBus-LibPath are now set to absolute paths inside the
+  IbLauncher project. Furthermore, the IbLauncher shell script now sets absolute paths for the bin
+  and lib path.
+- FastRTPS socket buffer sizes now use default values when not set in IbConfig. This could lead to
+  random socket buffer sizes in release builds.
+- VIB integration tests now can be launched directly from the Visual Studio test runner.
+
+### Interface compatibility with Sprint-27:
+* Application binary interface (ABI): Yes
+* Application software interface (API): Yes
+* Application middleware interface: Yes
 
 ## [Sprint-27] - 2019-06-19
 ### Added
