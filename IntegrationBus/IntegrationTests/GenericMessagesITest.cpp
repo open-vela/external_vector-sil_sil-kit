@@ -5,7 +5,8 @@
 #include <thread>
 #include <future>
 
-#include "CreateComAdapter.hpp"
+#include "ComAdapter.hpp"
+#include "ComAdapter_impl.hpp"
 #include "ib/sim/all.hpp"
 #include "ib/util/functional.hpp"
 
@@ -41,7 +42,7 @@ protected:
 
     void Subscribe()
     {
-        subComAdapter = CreateFastRtpsComAdapterImpl(ibConfig, "Subscriber");
+        subComAdapter = std::make_unique<ComAdapter<FastRtpsConnection>>(ibConfig, "Subscriber");
         subComAdapter->joinIbDomain(domainId);
 
         for (auto&& topic: topics)
@@ -62,7 +63,7 @@ protected:
 
     void Publish()
     {
-        pubComAdapter = CreateFastRtpsComAdapterImpl(ibConfig, "Publisher");
+        pubComAdapter = std::make_unique<ComAdapter<FastRtpsConnection>>(ibConfig, "Publisher");
         pubComAdapter->joinIbDomain(domainId);
 
         for (auto&& topic: topics)
@@ -88,8 +89,8 @@ protected:
     unsigned int receiveCount{0};
     std::promise<void> allReceivedPromise;
 
-    std::unique_ptr<IComAdapterInternal> pubComAdapter;
-    std::unique_ptr<IComAdapterInternal> subComAdapter;
+    std::unique_ptr<ComAdapter<FastRtpsConnection>> pubComAdapter;
+    std::unique_ptr<ComAdapter<FastRtpsConnection>> subComAdapter;
 };
     
 TEST_F(GenericMessageITest, publish_and_subscribe_generic_messages)

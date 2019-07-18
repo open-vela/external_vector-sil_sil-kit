@@ -28,6 +28,16 @@ FastRtpsConnection::FastRtpsConnection(cfg::Config config, std::string participa
 {
 }
 
+
+template<typename... Args>
+auto FastRtpsConnection::CreateFastrtpsParticipant(Args&&... args) -> eprosima::fastrtps::Participant*
+{
+    static std::mutex createFastRtpsParticipantMutex;
+    std::unique_lock<std::mutex> mutexGuard{createFastRtpsParticipantMutex};
+
+    return Domain::createParticipant(std::forward<Args>(args)...);
+}
+
 void FastRtpsConnection::joinDomain(uint32_t domainId)
 {
     if (_fastRtpsParticipant)
@@ -43,10 +53,9 @@ void FastRtpsConnection::joinDomain(uint32_t domainId)
     {
         // Create participant based on profile specified in file
         auto configFilePath = _config.configPath + fastRtpsCfg.configFileName;
-        auto domainLock{FastRtps::GetFastRtpsDomainLock()};
         if (Domain::loadXMLProfilesFile(configFilePath))
         {
-            participant = Domain::createParticipant(_participantName);
+            participant = CreateFastrtpsParticipant(_participantName);
         }
     }
     else
@@ -137,14 +146,13 @@ void FastRtpsConnection::joinDomain(uint32_t domainId)
             throw cfg::Misconfiguration{"Invalid FastRTPS configuration"};
         }
 
-        auto domainLock{FastRtps::GetFastRtpsDomainLock()};
-        participant = Domain::createParticipant(pParam);
+        participant = CreateFastrtpsParticipant(pParam);
     }
 
     if (participant == nullptr)
         throw std::exception();
 
-    _fastRtpsParticipant = std::unique_ptr<eprosima::fastrtps::Participant, FastRtps::RemoveParticipant>(participant);
+    _fastRtpsParticipant.reset(participant);
 }
 
 void FastRtpsConnection::registerTopicTypeIfNecessary(TopicDataType* topicType)

@@ -1,16 +1,11 @@
 =============
-IComAdapter
+ComAdapter
 =============
 
-The IComAdapter API
--------------------
+    .. doxygenfunction:: ib::CreateFastRtpsComAdapter
+
     .. doxygenclass:: ib::mw::IComAdapter
        :members:
 
-
-..          
-..    .. doxygenfunction:: ib::CreateFastRtpsComAdapter
-..
-..    .. doxygenstruct:: ib::mw::EndpointAddress
-..       :members:
-..
+    .. doxygenstruct:: ib::mw::EndpointAddress
+       :members:
