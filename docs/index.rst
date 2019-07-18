@@ -87,5 +87,4 @@ Version History
 .. toctree::
   :maxdepth: 2
 
-  CHANGELOG
-
+  overview/CHANGELOG

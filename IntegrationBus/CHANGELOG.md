@@ -9,16 +9,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
   and repetition. Cf., IFrController::ReconfigureTxBuffer(uint16_t, const TxBufferConfig&)
 ### Removed
 ### Changed
-- This is the last entry to CHANGELOG.md. From now on, the changelog
-  will be maintained in docs/CHANGELOG.rst.
+- The CHANGELOG.md will in future be maintained in the folder docs/ as CHANGELOG.rst.
 - The IB API Headers are no longer added to every project. Instead, a dedicated
   header project IbApi has been added.
 ### Fixed
 
 ### Interface compatibility with Sprint-28:
 * Application binary interface (ABI): No
-* Application software interface (API): Yes
-* Application middleware interface: Yes
+* Application software interface (API): Yes/No
+* Application middleware interface: Yes/No
 
 ## [Sprint-28] - 2019-07-03
 ### Added
