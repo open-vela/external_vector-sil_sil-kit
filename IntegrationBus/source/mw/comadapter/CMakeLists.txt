@@ -8,7 +8,6 @@ target_link_libraries(IbMwComAdapter
     PUBLIC  IbInterface
     PUBLIC  IbMwLogging
     PUBLIC  IbMwFastRtps
-    PUBLIC  IbMwVAsio
     PRIVATE IbConfig
     PRIVATE IbUtil
     PRIVATE IbMwSync
@@ -27,8 +26,6 @@ target_include_directories(IbMwComAdapter
 if (MSVC)
     target_compile_options(IbMwComAdapter PRIVATE "/bigobj")
 endif (MSVC)
-
-add_mvsc_ib_include_filter()
 
 add_vib_test(TestMwComAdapter SOURCES ComAdapterTest.cpp LIBS
     IbMwComAdapter
