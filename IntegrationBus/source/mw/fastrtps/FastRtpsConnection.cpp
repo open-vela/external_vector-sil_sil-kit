@@ -28,16 +28,6 @@ FastRtpsConnection::FastRtpsConnection(cfg::Config config, std::string participa
 {
 }
 
-
-template<typename... Args>
-auto FastRtpsConnection::CreateFastrtpsParticipant(Args&&... args) -> eprosima::fastrtps::Participant*
-{
-    static std::mutex createFastRtpsParticipantMutex;
-    std::unique_lock<std::mutex> mutexGuard{createFastRtpsParticipantMutex};
-
-    return Domain::createParticipant(std::forward<Args>(args)...);
-}
-
 void FastRtpsConnection::joinDomain(uint32_t domainId)
 {
     if (_fastRtpsParticipant)
@@ -53,9 +43,10 @@ void FastRtpsConnection::joinDomain(uint32_t domainId)
     {
         // Create participant based on profile specified in file
         auto configFilePath = _config.configPath + fastRtpsCfg.configFileName;
+        auto domainLock{FastRtps::GetFastRtpsDomainLock()};
         if (Domain::loadXMLProfilesFile(configFilePath))
         {
-            participant = CreateFastrtpsParticipant(_participantName);
+            participant = Domain::createParticipant(_participantName);
         }
     }
     else
@@ -146,13 +137,14 @@ void FastRtpsConnection::joinDomain(uint32_t domainId)
             throw cfg::Misconfiguration{"Invalid FastRTPS configuration"};
         }
 
-        participant = CreateFastrtpsParticipant(pParam);
+        auto domainLock{FastRtps::GetFastRtpsDomainLock()};
+        participant = Domain::createParticipant(pParam);
     }
 
     if (participant == nullptr)
         throw std::exception();
 
-    _fastRtpsParticipant.reset(participant);
+    _fastRtpsParticipant = std::unique_ptr<eprosima::fastrtps::Participant, FastRtps::RemoveParticipant>(participant);
 }
 
 void FastRtpsConnection::registerTopicTypeIfNecessary(TopicDataType* topicType)
@@ -203,7 +195,7 @@ auto FastRtpsConnection::createPublisher(const std::string& topicName, TopicData
             auto tickPeriod = std::chrono::duration_cast<std::chrono::duration<long double, std::ratio<1>>>(_config.simulationSetup.timeSync.tickPeriod);
             auto heartBeatPeriod = tickPeriod / 10.0;
 
-            pubAttributes.times.heartbeatPeriod = Time_t{heartBeatPeriod.count()};
+            pubAttributes.times.heartbeatPeriod = eprosima::fastrtps::Time_t{heartBeatPeriod.count()};
         }
         publisher = Domain::createPublisher(_fastRtpsParticipant.get(), pubAttributes, listener);
     }
@@ -253,7 +245,7 @@ void FastRtpsConnection::WaitForMessageDelivery()
          * waiting indefinitely, it causes wait_for_all_acked() to
          * return immediately.
          */
-        auto allAcked = publisher->wait_for_all_acked(Time_t{1200, 0});
+        auto allAcked = publisher->wait_for_all_acked(eprosima::fastrtps::Time_t{1200, 0});
         assert(allAcked);
     }
 }
