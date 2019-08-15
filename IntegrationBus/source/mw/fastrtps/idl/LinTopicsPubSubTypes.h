@@ -40,19 +40,80 @@ namespace ib
         {
             namespace idl
             {
-                typedef uint8_t LinIdT;
+                typedef uint8_t LinId;
 
-                typedef uint8_t DataLengthT;
+
+
                 /*!
-                 * @brief This class represents the TopicDataType of the type Frame defined by the user in the IDL file.
+                 * @brief This class represents the TopicDataType of the type LinMessage defined by the user in the IDL file.
                  * @ingroup LINTOPICS
                  */
-                class FramePubSubType : public eprosima::fastrtps::TopicDataType {
+                class LinMessagePubSubType : public eprosima::fastrtps::TopicDataType {
                 public:
-                        typedef Frame type;
+                        typedef LinMessage type;
 
-                	FramePubSubType();
-                	virtual ~FramePubSubType();
+                	LinMessagePubSubType();
+                	virtual ~LinMessagePubSubType();
+                	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
+                	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
+                    virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
+                	virtual bool getKey(void *data, eprosima::fastrtps::rtps::InstanceHandle_t *ihandle,
+                		bool force_md5 = false) override;
+                	virtual void* createData() override;
+                	virtual void deleteData(void * data) override;
+                	MD5 m_md5;
+                	unsigned char* m_keyBuffer;
+                };
+                /*!
+                 * @brief This class represents the TopicDataType of the type RxRequest defined by the user in the IDL file.
+                 * @ingroup LINTOPICS
+                 */
+                class RxRequestPubSubType : public eprosima::fastrtps::TopicDataType {
+                public:
+                        typedef RxRequest type;
+
+                	RxRequestPubSubType();
+                	virtual ~RxRequestPubSubType();
+                	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
+                	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
+                    virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
+                	virtual bool getKey(void *data, eprosima::fastrtps::rtps::InstanceHandle_t *ihandle,
+                		bool force_md5 = false) override;
+                	virtual void* createData() override;
+                	virtual void deleteData(void * data) override;
+                	MD5 m_md5;
+                	unsigned char* m_keyBuffer;
+                };
+                /*!
+                 * @brief This class represents the TopicDataType of the type TxAcknowledge defined by the user in the IDL file.
+                 * @ingroup LINTOPICS
+                 */
+                class TxAcknowledgePubSubType : public eprosima::fastrtps::TopicDataType {
+                public:
+                        typedef TxAcknowledge type;
+
+                	TxAcknowledgePubSubType();
+                	virtual ~TxAcknowledgePubSubType();
+                	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
+                	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
+                    virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
+                	virtual bool getKey(void *data, eprosima::fastrtps::rtps::InstanceHandle_t *ihandle,
+                		bool force_md5 = false) override;
+                	virtual void* createData() override;
+                	virtual void deleteData(void * data) override;
+                	MD5 m_md5;
+                	unsigned char* m_keyBuffer;
+                };
+                /*!
+                 * @brief This class represents the TopicDataType of the type WakeupRequest defined by the user in the IDL file.
+                 * @ingroup LINTOPICS
+                 */
+                class WakeupRequestPubSubType : public eprosima::fastrtps::TopicDataType {
+                public:
+                        typedef WakeupRequest type;
+
+                	WakeupRequestPubSubType();
+                	virtual ~WakeupRequestPubSubType();
                 	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
                 	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
                     virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
@@ -64,30 +125,6 @@ namespace ib
                 	unsigned char* m_keyBuffer;
                 };
 
-
-
-                /*!
-                 * @brief This class represents the TopicDataType of the type FrameResponse defined by the user in the IDL file.
-                 * @ingroup LINTOPICS
-                 */
-                class FrameResponsePubSubType : public eprosima::fastrtps::TopicDataType {
-                public:
-                        typedef FrameResponse type;
-
-                	FrameResponsePubSubType();
-                	virtual ~FrameResponsePubSubType();
-                	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
-                	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
-                    virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
-                	virtual bool getKey(void *data, eprosima::fastrtps::rtps::InstanceHandle_t *ihandle,
-                		bool force_md5 = false) override;
-                	virtual void* createData() override;
-                	virtual void deleteData(void * data) override;
-                	MD5 m_md5;
-                	unsigned char* m_keyBuffer;
-                };
-
-                typedef uint32_t BaudRateT;
                 /*!
                  * @brief This class represents the TopicDataType of the type ControllerConfig defined by the user in the IDL file.
                  * @ingroup LINTOPICS
@@ -108,17 +145,16 @@ namespace ib
                 	MD5 m_md5;
                 	unsigned char* m_keyBuffer;
                 };
-
                 /*!
-                 * @brief This class represents the TopicDataType of the type Transmission defined by the user in the IDL file.
+                 * @brief This class represents the TopicDataType of the type SlaveResponseConfig defined by the user in the IDL file.
                  * @ingroup LINTOPICS
                  */
-                class TransmissionPubSubType : public eprosima::fastrtps::TopicDataType {
+                class SlaveResponseConfigPubSubType : public eprosima::fastrtps::TopicDataType {
                 public:
-                        typedef Transmission type;
+                        typedef SlaveResponseConfig type;
 
-                	TransmissionPubSubType();
-                	virtual ~TransmissionPubSubType();
+                	SlaveResponseConfigPubSubType();
+                	virtual ~SlaveResponseConfigPubSubType();
                 	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
                 	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
                     virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
@@ -130,15 +166,15 @@ namespace ib
                 	unsigned char* m_keyBuffer;
                 };
                 /*!
-                 * @brief This class represents the TopicDataType of the type SendFrameRequest defined by the user in the IDL file.
+                 * @brief This class represents the TopicDataType of the type SlaveConfiguration defined by the user in the IDL file.
                  * @ingroup LINTOPICS
                  */
-                class SendFrameRequestPubSubType : public eprosima::fastrtps::TopicDataType {
+                class SlaveConfigurationPubSubType : public eprosima::fastrtps::TopicDataType {
                 public:
-                        typedef SendFrameRequest type;
+                        typedef SlaveConfiguration type;
 
-                	SendFrameRequestPubSubType();
-                	virtual ~SendFrameRequestPubSubType();
+                	SlaveConfigurationPubSubType();
+                	virtual ~SlaveConfigurationPubSubType();
                 	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
                 	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
                     virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
@@ -150,75 +186,15 @@ namespace ib
                 	unsigned char* m_keyBuffer;
                 };
                 /*!
-                 * @brief This class represents the TopicDataType of the type SendFrameHeaderRequest defined by the user in the IDL file.
+                 * @brief This class represents the TopicDataType of the type SlaveResponse defined by the user in the IDL file.
                  * @ingroup LINTOPICS
                  */
-                class SendFrameHeaderRequestPubSubType : public eprosima::fastrtps::TopicDataType {
+                class SlaveResponsePubSubType : public eprosima::fastrtps::TopicDataType {
                 public:
-                        typedef SendFrameHeaderRequest type;
+                        typedef SlaveResponse type;
 
-                	SendFrameHeaderRequestPubSubType();
-                	virtual ~SendFrameHeaderRequestPubSubType();
-                	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
-                	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
-                    virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
-                	virtual bool getKey(void *data, eprosima::fastrtps::rtps::InstanceHandle_t *ihandle,
-                		bool force_md5 = false) override;
-                	virtual void* createData() override;
-                	virtual void deleteData(void * data) override;
-                	MD5 m_md5;
-                	unsigned char* m_keyBuffer;
-                };
-                /*!
-                 * @brief This class represents the TopicDataType of the type FrameResponseUpdate defined by the user in the IDL file.
-                 * @ingroup LINTOPICS
-                 */
-                class FrameResponseUpdatePubSubType : public eprosima::fastrtps::TopicDataType {
-                public:
-                        typedef FrameResponseUpdate type;
-
-                	FrameResponseUpdatePubSubType();
-                	virtual ~FrameResponseUpdatePubSubType();
-                	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
-                	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
-                    virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
-                	virtual bool getKey(void *data, eprosima::fastrtps::rtps::InstanceHandle_t *ihandle,
-                		bool force_md5 = false) override;
-                	virtual void* createData() override;
-                	virtual void deleteData(void * data) override;
-                	MD5 m_md5;
-                	unsigned char* m_keyBuffer;
-                };
-                /*!
-                 * @brief This class represents the TopicDataType of the type ControllerStatusUpdate defined by the user in the IDL file.
-                 * @ingroup LINTOPICS
-                 */
-                class ControllerStatusUpdatePubSubType : public eprosima::fastrtps::TopicDataType {
-                public:
-                        typedef ControllerStatusUpdate type;
-
-                	ControllerStatusUpdatePubSubType();
-                	virtual ~ControllerStatusUpdatePubSubType();
-                	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
-                	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
-                    virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
-                	virtual bool getKey(void *data, eprosima::fastrtps::rtps::InstanceHandle_t *ihandle,
-                		bool force_md5 = false) override;
-                	virtual void* createData() override;
-                	virtual void deleteData(void * data) override;
-                	MD5 m_md5;
-                	unsigned char* m_keyBuffer;
-                };
-                /*!
-                 * @brief This class represents the TopicDataType of the type WakeupPulse defined by the user in the IDL file.
-                 * @ingroup LINTOPICS
-                 */
-                class WakeupPulsePubSubType : public eprosima::fastrtps::TopicDataType {
-                public:
-                        typedef WakeupPulse type;
-
-                	WakeupPulsePubSubType();
-                	virtual ~WakeupPulsePubSubType();
+                	SlaveResponsePubSubType();
+                	virtual ~SlaveResponsePubSubType();
                 	virtual bool serialize(void *data, eprosima::fastrtps::rtps::SerializedPayload_t *payload) override;
                 	virtual bool deserialize(eprosima::fastrtps::rtps::SerializedPayload_t *payload, void *data) override;
                     virtual std::function<uint32_t()> getSerializedSizeProvider(void* data) override;
