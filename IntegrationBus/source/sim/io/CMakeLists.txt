@@ -13,4 +13,5 @@ target_link_libraries(IbSimIO
     PRIVATE IbInterface
 )
 
-add_vib_test(TestSimInOutPort SOURCES InPortTest.cpp OutPortTest.cpp LIBS IbSimIO IbMwMockComAdapter)
+add_vib_test(TestSimInPort SOURCES InPortTest.cpp LIBS IbSimIO IbMwMock)
+add_vib_test(TestSimOutPort SOURCES OutPortTest.cpp LIBS IbSimIO IbMwMock)

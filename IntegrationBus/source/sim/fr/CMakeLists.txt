@@ -5,8 +5,6 @@ add_library(IbSimFlexRay STATIC
     FrControllerProxy.hpp
     FrDatatypeUtils.cpp
     FrDatatypeUtils.hpp
-    Validation.cpp
-    Validation.hpp
 )
 
 target_include_directories(IbSimFlexRay
@@ -17,5 +15,5 @@ target_link_libraries(IbSimFlexRay
     PRIVATE IbInterface
 )
 
-add_vib_test(TestSimFrValidation SOURCES ValidationTest.cpp LIBS IbSimFlexRay)
-add_vib_test(TestSimFrController SOURCES FrControllerTest.cpp FrControllerProxyTest.cpp LIBS IbSimFlexRay IbMwMockComAdapter)
+add_vib_test(TestSimFrController SOURCES FrControllerTest.cpp LIBS IbSimFlexRay IbMwMock)
+add_vib_test(TestSimFrControllerProxy SOURCES FrControllerProxyTest.cpp LIBS IbSimFlexRay IbMwMock)

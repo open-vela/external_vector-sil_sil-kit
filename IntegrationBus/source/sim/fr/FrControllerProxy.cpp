@@ -1,7 +1,6 @@
 // Copyright (c) Vector Informatik GmbH. All rights reserved.
 
 #include "FrControllerProxy.hpp"
-#include "Validation.hpp"
 
 #include "ib/mw/IComAdapter.hpp"
 #include "ib/mw/logging/spdlog.hpp"
@@ -17,9 +16,6 @@ FrControllerProxy::FrControllerProxy(mw::IComAdapter* comAdapter)
 
 void FrControllerProxy::Configure(const ControllerConfig& config)
 {
-    Validate(config.clusterParams);
-    Validate(config.nodeParams);
-
     _bufferConfigs = config.bufferConfigs;
     SendIbMessage(config);
 }

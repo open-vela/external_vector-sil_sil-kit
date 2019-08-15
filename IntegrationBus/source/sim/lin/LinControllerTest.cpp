@@ -10,482 +10,607 @@
 #include "gtest/gtest.h"
 
 #include "ib/mw/string_utils.hpp"
-#include "ib/sim/lin/string_utils.hpp"
 #include "ib/util/functional.hpp"
 
-#include "LinTestUtils.hpp"
+#include "MockComAdapter.hpp"
+
+#include "LinDatatypeUtils.hpp"
 
 namespace {
 
 using namespace std::chrono_literals;
 
-using namespace testing;
+using ::testing::_;
+using ::testing::A;
+using ::testing::An;
+using ::testing::InSequence;
+using ::testing::NiceMock;
+using ::testing::Return;
+
 using namespace ib::mw;
 using namespace ib::sim;
 using namespace ib::sim::lin;
-using namespace ib::sim::lin::test;
-using namespace ib::util;
+
+auto MakeControllerConfig(ControllerMode mode) -> ControllerConfig
+{
+    ControllerConfig ctrlConfig;
+    ctrlConfig.controllerMode = mode;
+
+    return ctrlConfig;
+}
+
+auto MakeSlaveConfiguration(std::initializer_list<SlaveResponseConfig> configs) -> SlaveConfiguration
+{
+    SlaveConfiguration slaveConfig;
+    slaveConfig.responseConfigs = configs;
+    return slaveConfig;
+}
+
+auto MakeSlaveResponseConfig(LinMessage msg, ResponseMode mode) -> SlaveResponseConfig
+{
+    SlaveResponseConfig responseConfig;
+    responseConfig.linId = msg.linId;
+    responseConfig.responseMode = mode;
+    responseConfig.payloadLength = msg.payload.size;
+    responseConfig.checksumModel = msg.checksumModel;
+    return responseConfig;
+}
+
+auto MakeSlaveResponse(LinMessage msg) -> SlaveResponse
+{
+    SlaveResponse response;
+    response.linId = msg.linId;
+    response.payload = msg.payload;
+    response.checksumModel = msg.checksumModel;
+    return response;
+}
+
 
 class LinControllerTest : public testing::Test
 {
 protected:
+    struct Callbacks
+    {
+        MOCK_METHOD2(ReceiveMessageStatus, void(ILinController*, MessageStatus));
+        MOCK_METHOD2(ReceiveMessage, void(ILinController*, const LinMessage&));
+        MOCK_METHOD1(SleepCommand, void(ILinController*));
+        MOCK_METHOD1(WakeupRequest, void(ILinController*));
+    };
+
+protected:
     LinControllerTest()
         : controller(&comAdapter)
     {
-        frameStatusHandler = 
-            [this](ILinController* ctrl, const Frame& frame, FrameStatus status, std::chrono::nanoseconds) {
-                callbacks.FrameStatusHandler(ctrl, frame, status);
-            };
-        
-        controller.SetEndpointAddress(ibAddr1);
+        comAdapter.logger = spdlog::default_logger();
+        controller.SetEndpointAddress(controllerAddress);
+        controller.RegisterReceiveMessageHandler(ib::util::bind_method(&callbacks, &Callbacks::ReceiveMessage));
+        controller.RegisterTxCompleteHandler(ib::util::bind_method(&callbacks, &Callbacks::ReceiveMessageStatus));
+        controller.RegisterSleepCommandHandler(ib::util::bind_method(&callbacks, &Callbacks::SleepCommand));
+        controller.RegisterWakeupRequestHandler(ib::util::bind_method(&callbacks, &Callbacks::WakeupRequest));
     }
 
 
 protected:
-    const EndpointAddress ibAddr1{4, 5};
-    const EndpointAddress ibAddr2{5, 8};
-    const EndpointAddress ibAddr3{6, 13};
+    const EndpointAddress controllerAddress{4, 5};
+    const EndpointAddress otherControllerAddress{5, 10};
 
-    LinMockComAdapter comAdapter;
+    ib::mw::test::MockComAdapter comAdapter;
     LinController controller;
     Callbacks callbacks;
-    LinController::FrameStatusHandler frameStatusHandler;
 };
 
 
-TEST_F(LinControllerTest, send_frame_with_master_response)
+TEST_F(LinControllerTest, send_lin_message)
 {
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
+    controller.SetMasterMode();
 
-    Frame frame = MakeFrame(17, ChecksumModel::Enhanced);
+    LinMessage msg;
+    msg.status = MessageStatus::TxSuccess;
 
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>()))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, msg))
         .Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(frame, FrameStatus::LIN_RX_OK)))
-        .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, frame, FrameStatus::LIN_TX_OK))
+    EXPECT_CALL(callbacks, ReceiveMessageStatus(&controller, MessageStatus::TxSuccess))
         .Times(1);
 
-    controller.SendFrame(frame, FrameResponseType::MasterResponse);
+    controller.SendMessage(msg);
 }
 
-TEST_F(LinControllerTest, send_frame_without_configured_response)
+TEST_F(LinControllerTest, request_lin_message_without_configured_response)
 {
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
+    RxRequest request{};
+    request.linId = 19;
+    request.checksumModel = ChecksumModel::Enhanced;
 
-    Frame frame = MakeFrame(17);
+    LinMessage reply{};
+    reply.linId = request.linId;
+    reply.status = MessageStatus::RxNoResponse;
+    reply.checksumModel = ChecksumModel::Undefined;
 
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>()))
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
         .Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(FrameStatus::LIN_RX_NO_RESPONSE)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const RxRequest&>()))
+        .Times(0);
+
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
         .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, A<const Frame&>(), FrameStatus::LIN_RX_NO_RESPONSE))
-        .Times(1);
-    controller.SendFrame(frame, FrameResponseType::SlaveResponse);
+
+    controller.SetMasterMode();
+    controller.RequestMessage(request);
 }
 
-TEST_F(LinControllerTest, send_frame_with_one_slave_response)
+TEST_F(LinControllerTest, request_lin_message_with_one_configured_response)
 {
-    // Configure Slave 1
-    ControllerConfig slaveConfig = MakeControllerConfig(ControllerMode::Slave);
-    FrameResponse response;
-    response.frame = MakeFrame(17, ChecksumModel::Enhanced, 4, {1,2,3,4,5,6,7,8});
-    response.responseMode = FrameResponseMode::TxUnconditional;
-    slaveConfig.frameResponses.push_back(response);
+    RxRequest request{};
+    request.linId = 20;
+    request.checksumModel = ChecksumModel::Enhanced;
 
-    controller.ReceiveIbMessage(ibAddr2, slaveConfig);
+    LinMessage reply{};
+    reply.linId = request.linId;
+    reply.status = MessageStatus::RxSuccess;
+    reply.payload.size = 4;
+    reply.payload.data = {{1,2,3,4,5,6,7,8}};
+    reply.checksumModel = ChecksumModel::Enhanced;
 
-    // Configure Master
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-    
-    // Send Frame
-    Frame frame = MakeFrame(17, ChecksumModel::Enhanced);
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>())).Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(response.frame, FrameStatus::LIN_RX_OK)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
         .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, response.frame, FrameStatus::LIN_RX_OK))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const RxRequest&>()))
+        .Times(0);
+
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
         .Times(1);
 
-    controller.SendFrame(frame, FrameResponseType::SlaveResponse);
+    controller.SetMasterMode();
+    controller.ReceiveIbMessage(otherControllerAddress, MakeControllerConfig(ControllerMode::Slave));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveConfiguration({MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(reply));
+
+    controller.RequestMessage(request);
 }
 
-
-TEST_F(LinControllerTest, send_frame_with_multiple_slave_responses)
+TEST_F(LinControllerTest, request_lin_message_with_multiple_configured_responses)
 {
-    // Configure Slave 1
-    ControllerConfig slaveConfig = MakeControllerConfig(ControllerMode::Slave);
-    FrameResponse response;
-    response.frame = MakeFrame(17, ChecksumModel::Enhanced, 4, {1,2,3,4,5,6,7,8});
-    response.responseMode = FrameResponseMode::TxUnconditional;
-    slaveConfig.frameResponses.push_back(response);
+    RxRequest request;
+    request.linId = 21;
+    request.checksumModel = ChecksumModel::Enhanced;
 
-    controller.ReceiveIbMessage(ibAddr2, slaveConfig);
+    LinMessage reply;
+    reply.linId = request.linId;
+    reply.status = MessageStatus::RxResponseError;
+    reply.payload.size = 4;
+    reply.payload.data = {{1,2,3,4,5,6,7,8}};
+    reply.checksumModel = ChecksumModel::Enhanced;
 
-    // Configure Slave 2
-    slaveConfig.frameResponses[0].frame = MakeFrame(17, ChecksumModel::Classic, 2, {0,1,0,1,0,1,0,1});
-
-    controller.ReceiveIbMessage(ibAddr3, slaveConfig);
-
-    // Configure Master
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-    
-    // Send Frame
-    Frame frame = MakeFrame(17, ChecksumModel::Enhanced);
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>())).Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(FrameStatus::LIN_RX_ERROR)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
         .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, A<const Frame&>(), FrameStatus::LIN_RX_ERROR))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const RxRequest&>()))
+        .Times(0);
+
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
         .Times(1);
 
-    controller.SendFrame(frame, FrameResponseType::SlaveResponse);
+
+    controller.SetMasterMode();
+
+    EndpointAddress slave1{2,4};
+    controller.ReceiveIbMessage(slave1, MakeControllerConfig(ControllerMode::Slave));
+    controller.ReceiveIbMessage(slave1, MakeSlaveConfiguration({MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(slave1, MakeSlaveResponse(reply));
+
+    EndpointAddress slave2{3,5};
+    controller.ReceiveIbMessage(slave2, MakeControllerConfig(ControllerMode::Slave));
+    controller.ReceiveIbMessage(slave2, MakeSlaveConfiguration({MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(slave2, MakeSlaveResponse(reply));
+
+    controller.RequestMessage(request);
 }
 
-TEST_F(LinControllerTest, send_frame_with_one_slave_sleeping)
+TEST_F(LinControllerTest, request_lin_message_with_sleeping_slave)
 {
-    // Configure Slave 1
-    ControllerConfig slaveConfig = MakeControllerConfig(ControllerMode::Slave);
-    FrameResponse response;
-    response.frame = MakeFrame(17, ChecksumModel::Enhanced, 4, {1,2,3,4,5,6,7,8});
-    response.responseMode = FrameResponseMode::TxUnconditional;
-    slaveConfig.frameResponses.push_back(response);
+    RxRequest request{};
+    request.linId = 20;
+    request.checksumModel = ChecksumModel::Enhanced;
 
-    controller.ReceiveIbMessage(ibAddr2, slaveConfig);
+    LinMessage reply{};
+    reply.linId = request.linId;
+    reply.status = MessageStatus::RxNoResponse;
+    reply.checksumModel = ChecksumModel::Undefined;
 
-    ControllerStatusUpdate slaveStatus;
-    slaveStatus.status = ControllerStatus::Sleep;
-    controller.ReceiveIbMessage(ibAddr2, slaveStatus);
 
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-    
-    // Send Frame
-    Frame frame = MakeFrame(17, ChecksumModel::Enhanced);
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>())).Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(FrameStatus::LIN_RX_NO_RESPONSE)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
         .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, AFrameWithId(17), FrameStatus::LIN_RX_NO_RESPONSE))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const RxRequest&>()))
+        .Times(0);
+
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
         .Times(1);
 
-    controller.SendFrame(frame, FrameResponseType::SlaveResponse);
+    controller.SetMasterMode();
+
+    controller.ReceiveIbMessage(otherControllerAddress, MakeControllerConfig(ControllerMode::Slave));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveConfiguration({MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(reply));
+
+    controller.ReceiveIbMessage(otherControllerAddress, MakeControllerConfig(ControllerMode::Sleep));
+
+    controller.RequestMessage(request);
 }
 
-TEST_F(LinControllerTest, send_frame_with_one_slave_response_removed)
+TEST_F(LinControllerTest, request_lin_message_after_remove_response)
 {
-    // Configure Slave 1
-    ControllerConfig slaveConfig = MakeControllerConfig(ControllerMode::Slave);
-    FrameResponse response;
-    response.frame = MakeFrame(17, ChecksumModel::Enhanced, 4, {1,2,3,4,5,6,7,8});
-    response.responseMode = FrameResponseMode::TxUnconditional;
-    slaveConfig.frameResponses.push_back(response);
+    RxRequest request{};
+    request.linId = 20;
+    request.checksumModel = ChecksumModel::Enhanced;
 
-    controller.ReceiveIbMessage(ibAddr2, slaveConfig);
+    LinMessage reply{};
+    reply.linId = request.linId;
+    reply.status = MessageStatus::RxSuccess;
+    reply.payload.size = 4;
+    reply.payload.data = {{1,2,3,4,5,6,7,8}};
+    reply.checksumModel = ChecksumModel::Enhanced;
 
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-    
-    // Send Frame
-    Frame frame = MakeFrame(17, ChecksumModel::Enhanced);
+    LinMessage noReply{};
+    noReply.linId = request.linId;
+    noReply.status = MessageStatus::RxNoResponse;
+    noReply.checksumModel = ChecksumModel::Undefined;
 
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>())).Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(response.frame, FrameStatus::LIN_RX_OK)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
         .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, response.frame, FrameStatus::LIN_RX_OK))
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
         .Times(1);
 
-    controller.SendFrame(frame, FrameResponseType::SlaveResponse);
-
-    // Remove Frame Response by marking it as unused
-    response.responseMode = FrameResponseMode::Unused;
-    FrameResponseUpdate responseUpdate;
-    responseUpdate.frameResponses.push_back(response);
-    controller.ReceiveIbMessage(ibAddr2, responseUpdate);
-
-    // Send Frame again
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>())).Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(FrameStatus::LIN_RX_NO_RESPONSE)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, noReply))
         .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, AFrameWithId(17), FrameStatus::LIN_RX_NO_RESPONSE))
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, noReply))
         .Times(1);
 
-    controller.SendFrame(frame, FrameResponseType::SlaveResponse);
+    controller.SetMasterMode();
+    controller.ReceiveIbMessage(otherControllerAddress, MakeControllerConfig(ControllerMode::Slave));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveConfiguration({MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(reply));
+    controller.RequestMessage(request);
+
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveConfiguration({MakeSlaveResponseConfig(noReply, ResponseMode::Unused)}));
+    controller.RequestMessage(request);
 }
 
-TEST_F(LinControllerTest, send_frame_header_with_master_response)
+TEST_F(LinControllerTest, remove_response)
 {
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
+    SlaveConfiguration slaveConfig;
+    SlaveResponseConfig responseConfig;
+    responseConfig.linId = 9;
+    responseConfig.responseMode = ResponseMode::Unused;
+    responseConfig.checksumModel = ChecksumModel::Undefined;
+    responseConfig.payloadLength = 0;
+    slaveConfig.responseConfigs.emplace_back(std::move(responseConfig));
 
-    Frame frame = MakeFrame(17, ChecksumModel::Enhanced);
-
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>()))
-        .Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(frame, FrameStatus::LIN_RX_OK)))
-        .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, frame, FrameStatus::LIN_TX_OK))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, slaveConfig))
         .Times(1);
 
-    controller.SetFrameResponse(frame, FrameResponseMode::TxUnconditional);
-    controller.SendFrameHeader(17);
+    controller.SetSlaveMode();
+    controller.RemoveResponse(9);
 }
 
-TEST_F(LinControllerTest, send_frame_header_remove_master_response)
+TEST_F(LinControllerTest, dont_acknowledge_master_transmit)
 {
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
+    controller.SetSlaveMode();
 
-    // Set Frame Response and Send Header
-    Frame frame = MakeFrame(17, ChecksumModel::Enhanced);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>()))
-        .Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(frame, FrameStatus::LIN_RX_OK)))
-        .Times(1);
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, frame, FrameStatus::LIN_TX_OK))
-        .Times(1);
+    LinMessage masterTx;
+    masterTx.linId = 17;
+    masterTx.status = MessageStatus::TxSuccess;
 
-    controller.SetFrameResponse(frame, FrameResponseMode::TxUnconditional);
-    controller.SendFrameHeader(17);
+    TxAcknowledge expectedAck;
+    expectedAck.linId = masterTx.linId;
+    expectedAck.status = MessageStatus::TxSuccess;
 
-    // Mark Frame as Unused and Send Header Again
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const FrameResponseUpdate&>()))
-        .Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(FrameStatus::LIN_RX_NO_RESPONSE)))
-        .Times(1);
-    // FIXME: should this really raise a LIN_TX_ERROR or rather a LIN_RX_NO_RESPONSE?
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, AFrameWithId(17), FrameStatus::LIN_TX_ERROR))
-        .Times(1);
-    controller.SetFrameResponse(frame, FrameResponseMode::Unused);
-    controller.SendFrameHeader(17);
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const TxAcknowledge&>()))
+        .Times(0);
+
+    controller.ReceiveIbMessage(otherControllerAddress, masterTx);
+}
+
+TEST_F(LinControllerTest, dont_acknowledge_slave_responses)
+{
+    controller.SetSlaveMode();
+
+    LinMessage slaveTx;
+    slaveTx.linId = 17;
+    slaveTx.status = MessageStatus::RxSuccess;
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const TxAcknowledge&>()))
+        .Times(0);
+
+    controller.ReceiveIbMessage(otherControllerAddress, slaveTx);
 }
 
 TEST_F(LinControllerTest, trigger_slave_callbacks)
 {
-    // Configure Slave
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Slave);
-    FrameResponse response;
+    controller.SetSlaveMode();
+    SlaveConfiguration config;
+    SlaveResponseConfig responseConfig;
+    responseConfig.responseMode = ResponseMode::Rx;
+    responseConfig.linId = 0;
+    config.responseConfigs.push_back(responseConfig);
+    responseConfig.linId = 1;
+    config.responseConfigs.push_back(responseConfig);
+    controller.SetSlaveConfiguration(config);
+
+    LinMessage masterTx;
+    masterTx.status = MessageStatus::TxSuccess;
+    masterTx.linId = 0;
+    LinMessage slaveTx;
+    slaveTx.status = MessageStatus::RxSuccess;
+    slaveTx.linId = 1;
     
-    response.frame = MakeFrame(17, ChecksumModel::Enhanced, 4);
-    response.responseMode = FrameResponseMode::Rx;
-    config.frameResponses.push_back(response);
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, masterTx)).Times(1);
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, slaveTx)).Times(1);
 
-    Frame txFrame = MakeFrame(18, ChecksumModel::Classic, 2, {1,2,0,0,0,0,0,0});
-    response.frame = txFrame;
-    response.responseMode = FrameResponseMode::TxUnconditional;
-    config.frameResponses.push_back(response);
-
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-
-    // Receive Transmission
-    Transmission transmission;
-
-    // Expect LIN_RX_OK
-    transmission.frame = MakeFrame(17, ChecksumModel::Enhanced, 4, {1,2,3,4,0,0,0,0});
-    transmission.status = FrameStatus::LIN_RX_OK;
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, transmission.frame, FrameStatus::LIN_RX_OK)).Times(1);
-    controller.ReceiveIbMessage(ibAddr2, transmission);
-
-    // Expect LIN_RX_ERRROR due to dataLength mismatch
-    transmission.frame = MakeFrame(17, ChecksumModel::Enhanced, 2, {1,2,0,0,0,0,0,0});
-    transmission.status = FrameStatus::LIN_RX_OK;
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, transmission.frame, FrameStatus::LIN_RX_ERROR)).Times(1);
-    controller.ReceiveIbMessage(ibAddr2, transmission);
-
-    // Expect LIN_RX_ERRROR due to checksumModel mismatch
-    transmission.frame = MakeFrame(17, ChecksumModel::Classic, 4, {1,2,3,4,0,0,0,0});
-    transmission.status = FrameStatus::LIN_RX_OK;
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, transmission.frame, FrameStatus::LIN_RX_ERROR)).Times(1);
-    controller.ReceiveIbMessage(ibAddr2, transmission);
-
-    // Expect LIN_TX_OK
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, txFrame, FrameStatus::LIN_TX_OK)).Times(1);
-    transmission.frame = txFrame;
-    controller.ReceiveIbMessage(ibAddr2, transmission);
-
-    // Expect no call at all
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, A<const Frame&>(), A<FrameStatus>())).Times(0);
-    transmission.frame.id = 19;
-    controller.ReceiveIbMessage(ibAddr2, transmission);
+    controller.ReceiveIbMessage(otherControllerAddress, masterTx);
+    controller.ReceiveIbMessage(otherControllerAddress, slaveTx);
 }
 
-TEST_F(LinControllerTest, distribute_frame_response_updates)
+TEST_F(LinControllerTest, propagate_new_response)
 {
-    // Configure Slave
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Slave);
-    controller.Init(config);
+    controller.SetSlaveMode();
 
-    FrameResponseUpdate responseUpdate;
-    FrameResponse response1;
-    response1.frame = MakeFrame(17, ChecksumModel::Enhanced);
-    response1.responseMode = FrameResponseMode::Rx;
-    responseUpdate.frameResponses.push_back(response1);
-    FrameResponse response2;
-    response2.frame = MakeFrame(19, ChecksumModel::Classic);
-    response2.responseMode = FrameResponseMode::TxUnconditional;
-    responseUpdate.frameResponses.push_back(response2);
+    Payload payload{4, {1,2,3,4,5,6,7,8}};
 
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, responseUpdate))
+    SlaveResponse expectedResponse;
+    expectedResponse.linId = 17;
+    expectedResponse.payload = payload;
+    expectedResponse.checksumModel = ChecksumModel::Undefined;
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, expectedResponse))
         .Times(1);
 
-    controller.SetFrameResponses(responseUpdate.frameResponses);
+    controller.SetResponse(17, payload);
 }
 
-TEST_F(LinControllerTest, trigger_frame_response_update_handler)
+TEST_F(LinControllerTest, propagate_new_response_with_checksummodel)
 {
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
+    controller.SetSlaveMode();
 
-    controller.RegisterFrameResponseUpdateHandler(bind_method(&callbacks, &Callbacks::FrameResponseUpdateHandler));
+    Payload payload{4,{1,2,3,4,5,6,7,8}};
 
-    FrameResponseUpdate responseUpdate;
-    FrameResponse response1;
-    response1.frame = MakeFrame(17, ChecksumModel::Enhanced);
-    response1.responseMode = FrameResponseMode::Rx;
-    responseUpdate.frameResponses.push_back(response1);
-    FrameResponse response2;
-    response2.frame = MakeFrame(19, ChecksumModel::Classic);
-    response2.responseMode = FrameResponseMode::TxUnconditional;
-    responseUpdate.frameResponses.push_back(response2);
+    SlaveResponse expectedResponse;
+    expectedResponse.linId = 17;
+    expectedResponse.payload = payload;
+    expectedResponse.checksumModel = ChecksumModel::Enhanced;
 
-    EXPECT_CALL(callbacks, FrameResponseUpdateHandler(&controller, ibAddr2, response1))
-        .Times(1);
-    EXPECT_CALL(callbacks, FrameResponseUpdateHandler(&controller, ibAddr2, response2))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, expectedResponse))
         .Times(1);
 
-    controller.ReceiveIbMessage(ibAddr2, responseUpdate);
+    controller.SetResponseWithChecksum(17, payload, ChecksumModel::Enhanced);
 }
 
-TEST_F(LinControllerTest, got_to_sleep)
+TEST_F(LinControllerTest, enable_false_checksum_emulation)
 {
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
+    RxRequest request{};
+    request.linId = 20;
+    request.checksumModel = ChecksumModel::Enhanced;
 
+    LinMessage goodReply{};
+    goodReply.linId = request.linId;
+    goodReply.status = MessageStatus::RxSuccess;
+    goodReply.payload.size = 4;
+    goodReply.payload.data = {{1,2,3,4,5,6,7,8}};
+    goodReply.checksumModel = ChecksumModel::Enhanced;
 
-    Transmission expectedTx;
-    expectedTx.frame = GoToSleepFrame();
-    expectedTx.status = FrameStatus::LIN_RX_OK;
+    LinMessage falseReply = goodReply;
+    falseReply.checksumModel = ChecksumModel::Classic;
 
-    ControllerStatusUpdate expectedStatus;
-    expectedStatus.status = ControllerStatus::Sleep;
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(GoToSleepFrame(), FrameStatus::LIN_RX_OK)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, goodReply))
+        .Times(2);
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, falseReply))
         .Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, AControllerStatusUpdateWith(ControllerStatus::Sleep)))
+
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, goodReply))
+        .Times(2);
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, falseReply))
         .Times(1);
 
-    controller.GoToSleep();
+    controller.SetMasterMode();
+    controller.ReceiveIbMessage(otherControllerAddress, MakeControllerConfig(ControllerMode::Slave));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveConfiguration({MakeSlaveResponseConfig(goodReply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(goodReply));
+    controller.RequestMessage(request);
+
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(falseReply));
+    controller.RequestMessage(request);
+
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(goodReply));
+    controller.RequestMessage(request);
 }
 
-TEST_F(LinControllerTest, got_to_sleep_internal)
+TEST_F(LinControllerTest, send_gotosleep_command)
 {
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
+    controller.SetMasterMode();
 
+    LinMessage gotosleepCmd;
+    gotosleepCmd.status  = MessageStatus::TxSuccess;
+    gotosleepCmd.linId   = LinId{0x3C};
+    gotosleepCmd.payload = Payload{8,{0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
+    gotosleepCmd.checksumModel = ChecksumModel::Classic;
 
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, ATransmissionWith(GoToSleepFrame(), FrameStatus::LIN_RX_OK)))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, gotosleepCmd))
+        .Times(1);
+
+    controller.SendGoToSleep();
+}
+
+TEST_F(LinControllerTest, call_gotosleep_callback)
+{
+    controller.SetSlaveMode();
+
+    SlaveConfiguration config;
+    SlaveResponseConfig responseConfig;
+    responseConfig.responseMode = ResponseMode::Rx;
+    responseConfig.linId = 0x3C;
+    config.responseConfigs.push_back(responseConfig);
+    controller.SetSlaveConfiguration(config);
+
+    LinMessage gotosleepCmd;
+    gotosleepCmd.status = MessageStatus::TxSuccess;
+    gotosleepCmd.linId = LinId{0x3C};
+    gotosleepCmd.payload = Payload{8, {0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
+    gotosleepCmd.checksumModel = ChecksumModel::Classic;
+
+    EXPECT_CALL(callbacks, SleepCommand(&controller))
+        .Times(1);
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, gotosleepCmd))
+        .Times(1);
+
+    controller.ReceiveIbMessage(otherControllerAddress, gotosleepCmd);
+}
+
+TEST_F(LinControllerTest, set_sleep_mode)
+{
+    controller.SetSlaveMode();
+
+    ControllerConfig sleepCfg{};
+    sleepCfg.controllerMode = ControllerMode::Sleep;
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, sleepCfg))
+        .Times(1);
+
+    controller.SetSleepMode();
+}
+
+TEST_F(LinControllerTest, send_wakeup_request)
+{
+    controller.SetSlaveMode();
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const WakeupRequest&>()))
+        .Times(1);
+
+    controller.SetSleepMode();
+    controller.SendWakeupRequest();
+}
+
+TEST_F(LinControllerTest, call_wakeup_callback)
+{
+    controller.SetMasterMode();
+
+    WakeupRequest wakeup;
+
+    EXPECT_CALL(callbacks, WakeupRequest(&controller))
+        .Times(1);
+
+    controller.ReceiveIbMessage(otherControllerAddress, wakeup);
+}
+
+TEST_F(LinControllerTest, set_master_operational)
+{
+    controller.SetMasterMode();
+    controller.SetSleepMode();
+
+    ControllerConfig operationalCfg{};
+    operationalCfg.controllerMode = ControllerMode::Master;
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, operationalCfg))
+        .Times(1);
+
+    controller.SetOperationalMode();
+}
+
+TEST_F(LinControllerTest, set_slave_operational)
+{
+    controller.SetSlaveMode();
+    controller.SetSleepMode();
+
+    ControllerConfig operationalCfg{};
+    operationalCfg.controllerMode = ControllerMode::Slave;
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, operationalCfg))
+        .Times(1);
+
+    controller.SetOperationalMode();
+}
+
+TEST_F(LinControllerTest, configure_master_after_slave)
+{
+    RxRequest request{};
+    request.linId = 20;
+    request.checksumModel = ChecksumModel::Enhanced;
+
+    LinMessage reply{};
+    reply.linId = request.linId;
+    reply.status = MessageStatus::RxSuccess;
+    reply.payload.size = 4;
+    reply.payload.data = {{1,2,3,4,5,6,7,8}};
+    reply.checksumModel = ChecksumModel::Enhanced;
+
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
+        .Times(1);
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const RxRequest&>()))
         .Times(0);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, AControllerStatusUpdateWith(ControllerStatus::Sleep)))
+
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
         .Times(1);
 
-    controller.GoToSleepInternal();
+    controller.ReceiveIbMessage(otherControllerAddress, MakeControllerConfig(ControllerMode::Slave));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveConfiguration({MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(reply));
+    controller.SetMasterMode();
+    controller.RequestMessage(request);
 }
 
-TEST_F(LinControllerTest, call_gotosleep_handler)
+TEST_F(LinControllerTest, set_slave_response_before_slaveconfiguration)
 {
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Slave);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-    controller.RegisterGoToSleepHandler(bind_method(&callbacks, &Callbacks::GoToSleepHandler));
+    // Ensure that the slave configuration is properly processed even
+    // if the middleware does not ensure in-order data delivery.
+    RxRequest request{};
+    request.linId = 20;
+    request.checksumModel = ChecksumModel::Enhanced;
 
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, A<const Frame&>(), _)).Times(0);
-    EXPECT_CALL(callbacks, GoToSleepHandler(&controller)).Times(1);
+    LinMessage reply{};
+    reply.linId = request.linId;
+    reply.status = MessageStatus::RxSuccess;
+    reply.payload.size = 4;
+    reply.payload.data = {{1,2,3,4,5,6,7,8}};
+    reply.checksumModel = ChecksumModel::Enhanced;
 
-    Transmission goToSleep;
-    goToSleep.frame = GoToSleepFrame();
-    goToSleep.status = FrameStatus::LIN_RX_OK;
-
-    controller.ReceiveIbMessage(ibAddr2, goToSleep);
-}
-
-TEST_F(LinControllerTest, wake_up)
-{
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const WakeupPulse&>()))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
         .Times(1);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, AControllerStatusUpdateWith(ControllerStatus::Operational)))
-        .Times(1);
-
-    controller.Wakeup();
-}
-
-TEST_F(LinControllerTest, wake_up_internal)
-{
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Master);
-    controller.Init(config);
-
-
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const WakeupPulse&>()))
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, A<const RxRequest&>()))
         .Times(0);
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, AControllerStatusUpdateWith(ControllerStatus::Operational)))
+
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
         .Times(1);
 
-    controller.WakeupInternal();
+    controller.SetMasterMode();
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveResponse(reply));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeSlaveConfiguration({MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional)}));
+    controller.ReceiveIbMessage(otherControllerAddress, MakeControllerConfig(ControllerMode::Slave));
+    controller.RequestMessage(request);
 }
 
-
-TEST_F(LinControllerTest, call_wakeup_handler)
+TEST_F(LinControllerTest, request_lin_message_from_master_with_configured_response)
 {
-    // Configure Master
-    EXPECT_CALL(comAdapter, SendIbMessage(ibAddr1, A<const ControllerConfig&>()));
-    ControllerConfig config = MakeControllerConfig(ControllerMode::Slave);
-    controller.Init(config);
-    controller.RegisterFrameStatusHandler(frameStatusHandler);
-    controller.RegisterWakeupHandler(bind_method(&callbacks, &Callbacks::WakeupHandler));
+    LinMessage reply{};
+    reply.linId = 17;
+    reply.status = MessageStatus::RxSuccess;
+    reply.payload.size = 4;
+    reply.payload.data = { { 1,2,3,4,5,6,7,8 } };
+    reply.checksumModel = ChecksumModel::Undefined;
 
-    EXPECT_CALL(callbacks, FrameStatusHandler(&controller, A<const Frame&>(), _)).Times(0);
-    EXPECT_CALL(callbacks, WakeupHandler(&controller)).Times(1);
+    RxRequest request{};
+    request.linId = reply.linId;
+    request.checksumModel = reply.checksumModel;
 
-    WakeupPulse wakeupPulse;
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, MakeSlaveConfiguration({ MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional) })))
+        .Times(1);
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, MakeSlaveResponse(reply)))
+        .Times(1);
+    EXPECT_CALL(comAdapter, SendIbMessage(controllerAddress, reply))
+        .Times(1);
+    EXPECT_CALL(callbacks, ReceiveMessage(&controller, reply))
+        .Times(1);
 
-    controller.ReceiveIbMessage(ibAddr2, wakeupPulse);
+    controller.SetMasterMode();
+    controller.SetSlaveConfiguration(MakeSlaveConfiguration({ MakeSlaveResponseConfig(reply, ResponseMode::TxUnconditional) }));
+    controller.SetResponse(reply.linId, reply.payload);
+    controller.RequestMessage(request);
 }
 
 } // anonymous namespace

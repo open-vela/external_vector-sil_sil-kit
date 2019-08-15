@@ -15,7 +15,6 @@
 #include "CanController.hpp"
 #include "CanDatatypesUtils.hpp"
 
-namespace {
 
 using namespace std::chrono_literals;
 
@@ -27,26 +26,21 @@ using testing::InSequence;
 using testing::NiceMock;
 
 using namespace ib::mw;
-using namespace ib::sim::can;
+using namespace ib::sim;
+using ib::mw::test::MockComAdapter;
 
-using ib::mw::test::DummyComAdapter;
-
-class MockComAdapter : public DummyComAdapter
-{
-public:
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const CanMessage&));
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const CanTransmitAcknowledge&));
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const CanConfigureBaudrate&));
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const CanSetControllerMode&));
-};
+namespace ib {
+namespace sim {
+namespace can {
+namespace test {
 
 class CanControllerCallbacks
 {
 public:
-    MOCK_METHOD2(ReceiveMessage, void(ICanController*, CanMessage));
-    MOCK_METHOD2(StateChanged, void(ICanController*, CanControllerState));
-    MOCK_METHOD2(ErrorStateChanged, void(ICanController*, CanErrorState));
-    MOCK_METHOD2(ReceiveAck, void(ICanController*, CanTransmitAcknowledge));
+    MOCK_METHOD2(ReceiveMessage, void(can::ICanController*, can::CanMessage));
+    MOCK_METHOD2(StateChanged, void(can::ICanController*, can::CanControllerState));
+    MOCK_METHOD2(ErrorStateChanged, void(can::ICanController*, can::CanErrorState));
+    MOCK_METHOD2(ReceiveAck, void(can::ICanController*, can::CanTransmitAcknowledge));
 };
 
 TEST(CanControllerTest, send_can_message)
@@ -186,4 +180,9 @@ TEST(CanControllerTest, generate_ack)
     canController.ReceiveIbMessage(senderAddress, msg);
 }
 
-}  // anonymous namespace
+
+} // namespace test
+} // namespace can
+} // namespace sim
+} // namespace ib
+
