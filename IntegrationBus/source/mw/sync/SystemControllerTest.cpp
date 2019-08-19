@@ -23,16 +23,8 @@ using namespace testing;
 using namespace ib;
 using namespace ib::mw;
 using namespace ib::mw::sync;
+using namespace ib::mw::test;
 using namespace ib::util;
-
-using ::ib::mw::test::DummyComAdapter;
-
-class MockComAdapter : public DummyComAdapter
-{
-public:
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const ParticipantCommand& msg));
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const SystemCommand& msg));
-};
 
 class SystemControllerTest : public testing::Test
 {
@@ -110,5 +102,7 @@ TEST_F(SystemControllerTest, send_executecoldswap)
     EXPECT_CALL(comAdapter, SendIbMessage(addr, cmd)).Times(1);
     controller.ExecuteColdswap();
 }
+
+
 
 } // anonymous namespace for test

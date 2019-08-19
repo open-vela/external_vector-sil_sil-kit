@@ -30,15 +30,6 @@ using namespace ib::mw::sync;
 
 using namespace testing;
 
-using ::ib::mw::test::DummyComAdapter;
-
-class MockComAdapter : public DummyComAdapter
-{
-public:
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const Tick&));
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const QuantumGrant& msg));
-};
-
 class MockMonitor : public ISystemMonitor
 {
 public:
@@ -77,6 +68,7 @@ public:
     std::map<ParticipantId, sync::ParticipantStatus> participantStatus;
 };
 
+
 class SyncMasterTest : public testing::Test
 {
 protected:
@@ -86,9 +78,10 @@ protected:
     }
 
 protected:
-    MockComAdapter comAdapter;
+    ib::mw::test::MockComAdapter comAdapter;
     MockMonitor mockMonitor;
 };
+
 
 
 TEST_F(SyncMasterTest, discrete_time_only)

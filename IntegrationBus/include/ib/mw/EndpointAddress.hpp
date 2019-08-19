@@ -36,7 +36,6 @@ struct EndpointAddress
 
 inline bool operator==(ib::mw::EndpointAddress lhs, ib::mw::EndpointAddress rhs);
 inline bool operator!=(ib::mw::EndpointAddress lhs, ib::mw::EndpointAddress rhs);
-inline bool operator<(ib::mw::EndpointAddress lhs, ib::mw::EndpointAddress rhs);
 
 
 // ================================================================================
@@ -52,12 +51,6 @@ bool operator!=(ib::mw::EndpointAddress lhs, ib::mw::EndpointAddress rhs)
 {
     return lhs.participant != rhs.participant
         || lhs.endpoint != rhs.endpoint;
-}
-
-bool operator<(ib::mw::EndpointAddress lhs, ib::mw::EndpointAddress rhs)
-{
-    return lhs.participant < rhs.participant
-        || (lhs.participant == rhs.participant && lhs.endpoint < rhs.endpoint);
 }
 
 } // namespace mw

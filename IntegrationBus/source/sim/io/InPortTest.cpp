@@ -21,22 +21,13 @@ using namespace testing;
 
 using namespace ib::mw;
 using namespace ib::sim;
-using namespace ib::sim::io;
-
-using ::ib::mw::test::DummyComAdapter;
-
-class MockComAdapter : public DummyComAdapter
-{
-public:
-    MOCK_METHOD2(SendIbMessage, void(EndpointAddress, const AnalogIoMessage&));
-};
 
 class InPortTest : public ::testing::Test
 {
 protected:
-    using MessageType = AnalogIoMessage;
-    using ValueType = IInPort<MessageType>::ValueType;
-    using InterfaceType = IInPort<MessageType>;
+    using MessageType = io::AnalogIoMessage;
+    using ValueType = io::IInPort<MessageType>::ValueType;
+    using InterfaceType = io::IInPort<MessageType>;
 
 protected:
     struct Callbacks
@@ -65,8 +56,8 @@ protected:
     const EndpointAddress portAddress{4, 5};
     const EndpointAddress otherPortAddress{5, 10};
 
-    MockComAdapter comAdapter;
-    InPort<MessageType> port;
+    test::MockComAdapter comAdapter;
+    io::InPort<MessageType> port;
     Callbacks callbacks;
 };
 

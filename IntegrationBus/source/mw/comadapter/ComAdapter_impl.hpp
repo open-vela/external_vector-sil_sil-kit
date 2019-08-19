@@ -459,25 +459,25 @@ void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::f
 }
 
 template <class IbConnectionT>
-void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::SendFrameRequest& msg)
+void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::LinMessage& msg)
 {
     SendIbMessageImpl(from, msg);
 }
 
 template <class IbConnectionT>
-void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::SendFrameHeaderRequest& msg)
+void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::RxRequest& msg)
 {
     SendIbMessageImpl(from, msg);
 }
 
 template <class IbConnectionT>
-void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::Transmission& msg)
+void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::TxAcknowledge& msg)
 {
     SendIbMessageImpl(from, msg);
 }
 
 template <class IbConnectionT>
-void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::WakeupPulse& msg)
+void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::WakeupRequest& msg)
 {
     SendIbMessageImpl(from, msg);
 }
@@ -489,13 +489,13 @@ void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::l
 }
 
 template <class IbConnectionT>
-void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::ControllerStatusUpdate& msg)
+void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::SlaveConfiguration& msg)
 {
     SendIbMessageImpl(from, msg);
 }
 
 template <class IbConnectionT>
-void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::FrameResponseUpdate& msg)
+void ComAdapter<IbConnectionT>::SendIbMessage(EndpointAddress from, const sim::lin::SlaveResponse& msg)
 {
     SendIbMessageImpl(from, msg);
 }
