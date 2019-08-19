@@ -35,66 +35,88 @@ using namespace eprosima::fastcdr::exception;
 
 
 
-ib::sim::lin::idl::Frame::Frame()
-{
-    m_id = 0;
 
+ib::sim::lin::idl::LinMessage::LinMessage()
+{
+
+    m_status = ib::sim::lin::idl::TxSuccess;
+
+    m_timestamp = 0;
+
+    m_linId = 0;
+
+    m_payloadLength = 0;
+
+    memset(&m_payload, 0, (8) * 1);
     m_checksumModel = ib::sim::lin::idl::Undefined;
 
-    m_dataLength = 0;
-
-    memset(&m_data, 0, (8) * 1);
 
 }
 
-ib::sim::lin::idl::Frame::~Frame()
+ib::sim::lin::idl::LinMessage::~LinMessage()
 {
 }
 
-ib::sim::lin::idl::Frame::Frame(const Frame &x)
+ib::sim::lin::idl::LinMessage::LinMessage(const LinMessage &x)
 {
-    m_id = x.m_id;
+    m_senderAddr = x.m_senderAddr;
+    m_status = x.m_status;
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = x.m_payload;
     m_checksumModel = x.m_checksumModel;
-    m_dataLength = x.m_dataLength;
-    m_data = x.m_data;
 }
 
-ib::sim::lin::idl::Frame::Frame(Frame &&x)
+ib::sim::lin::idl::LinMessage::LinMessage(LinMessage &&x)
 {
-    m_id = x.m_id;
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_status = x.m_status;
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = std::move(x.m_payload);
     m_checksumModel = x.m_checksumModel;
-    m_dataLength = x.m_dataLength;
-    m_data = std::move(x.m_data);
 }
 
-ib::sim::lin::idl::Frame& ib::sim::lin::idl::Frame::operator=(const Frame &x)
+ib::sim::lin::idl::LinMessage& ib::sim::lin::idl::LinMessage::operator=(const LinMessage &x)
 {
-    m_id = x.m_id;
+    m_senderAddr = x.m_senderAddr;
+    m_status = x.m_status;
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = x.m_payload;
     m_checksumModel = x.m_checksumModel;
-    m_dataLength = x.m_dataLength;
-    m_data = x.m_data;
 
     return *this;
 }
 
-ib::sim::lin::idl::Frame& ib::sim::lin::idl::Frame::operator=(Frame &&x)
+ib::sim::lin::idl::LinMessage& ib::sim::lin::idl::LinMessage::operator=(LinMessage &&x)
 {
-    m_id = x.m_id;
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_status = x.m_status;
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = std::move(x.m_payload);
     m_checksumModel = x.m_checksumModel;
-    m_dataLength = x.m_dataLength;
-    m_data = std::move(x.m_data);
 
     return *this;
 }
 
-size_t ib::sim::lin::idl::Frame::getMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::LinMessage::getMaxCdrSerializedSize(size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
 
-    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
-
-
+    current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
 
     current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
@@ -103,19 +125,26 @@ size_t ib::sim::lin::idl::Frame::getMaxCdrSerializedSize(size_t current_alignmen
     current_alignment += ((8) * 1) + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
 
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
 
     return current_alignment - initial_alignment;
 }
 
-size_t ib::sim::lin::idl::Frame::getCdrSerializedSize(const ib::sim::lin::idl::Frame& data, size_t current_alignment)
+size_t ib::sim::lin::idl::LinMessage::getCdrSerializedSize(const ib::sim::lin::idl::LinMessage& data, size_t current_alignment)
 {
     (void)data;
     size_t initial_alignment = current_alignment;
 
-    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
-
-
+    current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
 
     current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
@@ -123,34 +152,50 @@ size_t ib::sim::lin::idl::Frame::getCdrSerializedSize(const ib::sim::lin::idl::F
 
     current_alignment += ((8) * 1) + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
 
     return current_alignment - initial_alignment;
 }
 
-void ib::sim::lin::idl::Frame::serialize(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::LinMessage::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
-    scdr << m_id;
+    scdr << m_senderAddr;
+    scdr << (uint32_t)m_status;
+    scdr << m_timestamp;
+    scdr << m_linId;
+    scdr << m_payloadLength;
+    scdr << m_payload;
     scdr << (uint32_t)m_checksumModel;
-    scdr << m_dataLength;
-    scdr << m_data;
 }
 
-void ib::sim::lin::idl::Frame::deserialize(eprosima::fastcdr::Cdr &dcdr)
+void ib::sim::lin::idl::LinMessage::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
-    dcdr >> m_id;
+    dcdr >> m_senderAddr;
+    {
+        uint32_t enum_value = 0;
+        dcdr >> enum_value;
+        m_status = (ib::sim::lin::idl::MessageStatus)enum_value;
+    }
+    dcdr >> m_timestamp;
+    dcdr >> m_linId;
+    dcdr >> m_payloadLength;
+    dcdr >> m_payload;
     {
         uint32_t enum_value = 0;
         dcdr >> enum_value;
         m_checksumModel = (ib::sim::lin::idl::ChecksumModel)enum_value;
     }
-    dcdr >> m_dataLength;
-    dcdr >> m_data;
 }
 
-size_t ib::sim::lin::idl::Frame::getKeyMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::LinMessage::getKeyMaxCdrSerializedSize(size_t current_alignment)
 {
 	size_t current_align = current_alignment;
             
+     current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
+
+
 
 
 
@@ -159,67 +204,85 @@ size_t ib::sim::lin::idl::Frame::getKeyMaxCdrSerializedSize(size_t current_align
     return current_align;
 }
 
-bool ib::sim::lin::idl::Frame::isKeyDefined()
+bool ib::sim::lin::idl::LinMessage::isKeyDefined()
 {
-    return false;
+    return true;
 }
 
-void ib::sim::lin::idl::Frame::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::LinMessage::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 {
 	(void) scdr;
+	 scdr << m_senderAddr;  
 	 
 	 
 	 
 	 
+	 
+	 
 }
-
-
-
-ib::sim::lin::idl::FrameResponse::FrameResponse()
+ib::sim::lin::idl::RxRequest::RxRequest()
 {
 
-    m_responseMode = ib::sim::lin::idl::Unused;
+    m_linId = 0;
+
+    m_payloadLength = 0;
+
+    m_checksumModel = ib::sim::lin::idl::Undefined;
 
 
 }
 
-ib::sim::lin::idl::FrameResponse::~FrameResponse()
+ib::sim::lin::idl::RxRequest::~RxRequest()
 {
 }
 
-ib::sim::lin::idl::FrameResponse::FrameResponse(const FrameResponse &x)
+ib::sim::lin::idl::RxRequest::RxRequest(const RxRequest &x)
 {
-    m_frame = x.m_frame;
-    m_responseMode = x.m_responseMode;
+    m_senderAddr = x.m_senderAddr;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_checksumModel = x.m_checksumModel;
 }
 
-ib::sim::lin::idl::FrameResponse::FrameResponse(FrameResponse &&x)
+ib::sim::lin::idl::RxRequest::RxRequest(RxRequest &&x)
 {
-    m_frame = std::move(x.m_frame);
-    m_responseMode = x.m_responseMode;
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_checksumModel = x.m_checksumModel;
 }
 
-ib::sim::lin::idl::FrameResponse& ib::sim::lin::idl::FrameResponse::operator=(const FrameResponse &x)
+ib::sim::lin::idl::RxRequest& ib::sim::lin::idl::RxRequest::operator=(const RxRequest &x)
 {
-    m_frame = x.m_frame;
-    m_responseMode = x.m_responseMode;
+    m_senderAddr = x.m_senderAddr;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_checksumModel = x.m_checksumModel;
 
     return *this;
 }
 
-ib::sim::lin::idl::FrameResponse& ib::sim::lin::idl::FrameResponse::operator=(FrameResponse &&x)
+ib::sim::lin::idl::RxRequest& ib::sim::lin::idl::RxRequest::operator=(RxRequest &&x)
 {
-    m_frame = std::move(x.m_frame);
-    m_responseMode = x.m_responseMode;
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_checksumModel = x.m_checksumModel;
 
     return *this;
 }
 
-size_t ib::sim::lin::idl::FrameResponse::getMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::RxRequest::getMaxCdrSerializedSize(size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
 
-    current_alignment += ib::sim::lin::idl::Frame::getMaxCdrSerializedSize(current_alignment);
+    current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
 
@@ -227,12 +290,18 @@ size_t ib::sim::lin::idl::FrameResponse::getMaxCdrSerializedSize(size_t current_
     return current_alignment - initial_alignment;
 }
 
-size_t ib::sim::lin::idl::FrameResponse::getCdrSerializedSize(const ib::sim::lin::idl::FrameResponse& data, size_t current_alignment)
+size_t ib::sim::lin::idl::RxRequest::getCdrSerializedSize(const ib::sim::lin::idl::RxRequest& data, size_t current_alignment)
 {
     (void)data;
     size_t initial_alignment = current_alignment;
 
-    current_alignment += ib::sim::lin::idl::Frame::getCdrSerializedSize(data.frame(), current_alignment);
+    current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
 
@@ -240,52 +309,290 @@ size_t ib::sim::lin::idl::FrameResponse::getCdrSerializedSize(const ib::sim::lin
     return current_alignment - initial_alignment;
 }
 
-void ib::sim::lin::idl::FrameResponse::serialize(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::RxRequest::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
-    scdr << m_frame;
-    scdr << (uint32_t)m_responseMode;
+    scdr << m_senderAddr;
+    scdr << m_linId;
+    scdr << m_payloadLength;
+    scdr << (uint32_t)m_checksumModel;
 }
 
-void ib::sim::lin::idl::FrameResponse::deserialize(eprosima::fastcdr::Cdr &dcdr)
+void ib::sim::lin::idl::RxRequest::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
-    dcdr >> m_frame;
+    dcdr >> m_senderAddr;
+    dcdr >> m_linId;
+    dcdr >> m_payloadLength;
     {
         uint32_t enum_value = 0;
         dcdr >> enum_value;
-        m_responseMode = (ib::sim::lin::idl::FrameResponseMode)enum_value;
+        m_checksumModel = (ib::sim::lin::idl::ChecksumModel)enum_value;
     }
 }
 
-size_t ib::sim::lin::idl::FrameResponse::getKeyMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::RxRequest::getKeyMaxCdrSerializedSize(size_t current_alignment)
 {
 	size_t current_align = current_alignment;
             
+     current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
+
 
 
 
     return current_align;
 }
 
-bool ib::sim::lin::idl::FrameResponse::isKeyDefined()
+bool ib::sim::lin::idl::RxRequest::isKeyDefined()
 {
-    return false;
+    return true;
 }
 
-void ib::sim::lin::idl::FrameResponse::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::RxRequest::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 {
 	(void) scdr;
+	 scdr << m_senderAddr;  
+	 
 	 
 	 
 }
+ib::sim::lin::idl::TxAcknowledge::TxAcknowledge()
+{
 
+    m_timestamp = 0;
+
+    m_linId = 0;
+
+    m_status = ib::sim::lin::idl::TxSuccess;
+
+
+}
+
+ib::sim::lin::idl::TxAcknowledge::~TxAcknowledge()
+{
+}
+
+ib::sim::lin::idl::TxAcknowledge::TxAcknowledge(const TxAcknowledge &x)
+{
+    m_senderAddr = x.m_senderAddr;
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_status = x.m_status;
+}
+
+ib::sim::lin::idl::TxAcknowledge::TxAcknowledge(TxAcknowledge &&x)
+{
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_status = x.m_status;
+}
+
+ib::sim::lin::idl::TxAcknowledge& ib::sim::lin::idl::TxAcknowledge::operator=(const TxAcknowledge &x)
+{
+    m_senderAddr = x.m_senderAddr;
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_status = x.m_status;
+
+    return *this;
+}
+
+ib::sim::lin::idl::TxAcknowledge& ib::sim::lin::idl::TxAcknowledge::operator=(TxAcknowledge &&x)
+{
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_timestamp = x.m_timestamp;
+    m_linId = x.m_linId;
+    m_status = x.m_status;
+
+    return *this;
+}
+
+size_t ib::sim::lin::idl::TxAcknowledge::getMaxCdrSerializedSize(size_t current_alignment)
+{
+    size_t initial_alignment = current_alignment;
+
+    current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
+    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+
+    return current_alignment - initial_alignment;
+}
+
+size_t ib::sim::lin::idl::TxAcknowledge::getCdrSerializedSize(const ib::sim::lin::idl::TxAcknowledge& data, size_t current_alignment)
+{
+    (void)data;
+    size_t initial_alignment = current_alignment;
+
+    current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
+    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+
+    return current_alignment - initial_alignment;
+}
+
+void ib::sim::lin::idl::TxAcknowledge::serialize(eprosima::fastcdr::Cdr &scdr) const
+{
+    scdr << m_senderAddr;
+    scdr << m_timestamp;
+    scdr << m_linId;
+    scdr << (uint32_t)m_status;
+}
+
+void ib::sim::lin::idl::TxAcknowledge::deserialize(eprosima::fastcdr::Cdr &dcdr)
+{
+    dcdr >> m_senderAddr;
+    dcdr >> m_timestamp;
+    dcdr >> m_linId;
+    {
+        uint32_t enum_value = 0;
+        dcdr >> enum_value;
+        m_status = (ib::sim::lin::idl::MessageStatus)enum_value;
+    }
+}
+
+size_t ib::sim::lin::idl::TxAcknowledge::getKeyMaxCdrSerializedSize(size_t current_alignment)
+{
+	size_t current_align = current_alignment;
+            
+     current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
+
+
+
+
+    return current_align;
+}
+
+bool ib::sim::lin::idl::TxAcknowledge::isKeyDefined()
+{
+    return true;
+}
+
+void ib::sim::lin::idl::TxAcknowledge::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+{
+	(void) scdr;
+	 scdr << m_senderAddr;  
+	 
+	 
+	 
+}
+ib::sim::lin::idl::WakeupRequest::WakeupRequest()
+{
+
+    m_timestampNs = 0;
+
+
+}
+
+ib::sim::lin::idl::WakeupRequest::~WakeupRequest()
+{
+}
+
+ib::sim::lin::idl::WakeupRequest::WakeupRequest(const WakeupRequest &x)
+{
+    m_senderAddr = x.m_senderAddr;
+    m_timestampNs = x.m_timestampNs;
+}
+
+ib::sim::lin::idl::WakeupRequest::WakeupRequest(WakeupRequest &&x)
+{
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_timestampNs = x.m_timestampNs;
+}
+
+ib::sim::lin::idl::WakeupRequest& ib::sim::lin::idl::WakeupRequest::operator=(const WakeupRequest &x)
+{
+    m_senderAddr = x.m_senderAddr;
+    m_timestampNs = x.m_timestampNs;
+
+    return *this;
+}
+
+ib::sim::lin::idl::WakeupRequest& ib::sim::lin::idl::WakeupRequest::operator=(WakeupRequest &&x)
+{
+    m_senderAddr = std::move(x.m_senderAddr);
+    m_timestampNs = x.m_timestampNs;
+
+    return *this;
+}
+
+size_t ib::sim::lin::idl::WakeupRequest::getMaxCdrSerializedSize(size_t current_alignment)
+{
+    size_t initial_alignment = current_alignment;
+
+    current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
+    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+
+
+
+    return current_alignment - initial_alignment;
+}
+
+size_t ib::sim::lin::idl::WakeupRequest::getCdrSerializedSize(const ib::sim::lin::idl::WakeupRequest& data, size_t current_alignment)
+{
+    (void)data;
+    size_t initial_alignment = current_alignment;
+
+    current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
+    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+
+
+
+    return current_alignment - initial_alignment;
+}
+
+void ib::sim::lin::idl::WakeupRequest::serialize(eprosima::fastcdr::Cdr &scdr) const
+{
+    scdr << m_senderAddr;
+    scdr << m_timestampNs;
+}
+
+void ib::sim::lin::idl::WakeupRequest::deserialize(eprosima::fastcdr::Cdr &dcdr)
+{
+    dcdr >> m_senderAddr;
+    dcdr >> m_timestampNs;
+}
+
+size_t ib::sim::lin::idl::WakeupRequest::getKeyMaxCdrSerializedSize(size_t current_alignment)
+{
+	size_t current_align = current_alignment;
+            
+     current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
+
+
+    return current_align;
+}
+
+bool ib::sim::lin::idl::WakeupRequest::isKeyDefined()
+{
+    return true;
+}
+
+void ib::sim::lin::idl::WakeupRequest::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+{
+	(void) scdr;
+	 scdr << m_senderAddr;  
+	 
+}
 
 ib::sim::lin::idl::ControllerConfig::ControllerConfig()
 {
 
     m_controllerMode = ib::sim::lin::idl::Inactive;
 
-    m_baudRate = 0;
-
+    m_baudrate = 0;
 
 
 }
@@ -298,24 +605,21 @@ ib::sim::lin::idl::ControllerConfig::ControllerConfig(const ControllerConfig &x)
 {
     m_senderAddr = x.m_senderAddr;
     m_controllerMode = x.m_controllerMode;
-    m_baudRate = x.m_baudRate;
-    m_frameResponses = x.m_frameResponses;
+    m_baudrate = x.m_baudrate;
 }
 
 ib::sim::lin::idl::ControllerConfig::ControllerConfig(ControllerConfig &&x)
 {
     m_senderAddr = std::move(x.m_senderAddr);
     m_controllerMode = x.m_controllerMode;
-    m_baudRate = x.m_baudRate;
-    m_frameResponses = std::move(x.m_frameResponses);
+    m_baudrate = x.m_baudrate;
 }
 
 ib::sim::lin::idl::ControllerConfig& ib::sim::lin::idl::ControllerConfig::operator=(const ControllerConfig &x)
 {
     m_senderAddr = x.m_senderAddr;
     m_controllerMode = x.m_controllerMode;
-    m_baudRate = x.m_baudRate;
-    m_frameResponses = x.m_frameResponses;
+    m_baudrate = x.m_baudrate;
 
     return *this;
 }
@@ -324,8 +628,7 @@ ib::sim::lin::idl::ControllerConfig& ib::sim::lin::idl::ControllerConfig::operat
 {
     m_senderAddr = std::move(x.m_senderAddr);
     m_controllerMode = x.m_controllerMode;
-    m_baudRate = x.m_baudRate;
-    m_frameResponses = std::move(x.m_frameResponses);
+    m_baudrate = x.m_baudrate;
 
     return *this;
 }
@@ -340,13 +643,6 @@ size_t ib::sim::lin::idl::ControllerConfig::getMaxCdrSerializedSize(size_t curre
 
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
-
-    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
-
-
-    for(size_t a = 0; a < 100; ++a)
-    {
-        current_alignment += ib::sim::lin::idl::FrameResponse::getMaxCdrSerializedSize(current_alignment);}
 
 
     return current_alignment - initial_alignment;
@@ -364,13 +660,6 @@ size_t ib::sim::lin::idl::ControllerConfig::getCdrSerializedSize(const ib::sim::
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
 
-    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
-
-
-    for(size_t a = 0; a < data.frameResponses().size(); ++a)
-    {
-        current_alignment += ib::sim::lin::idl::FrameResponse::getCdrSerializedSize(data.frameResponses().at(a), current_alignment);}
-
 
     return current_alignment - initial_alignment;
 }
@@ -379,8 +668,7 @@ void ib::sim::lin::idl::ControllerConfig::serialize(eprosima::fastcdr::Cdr &scdr
 {
     scdr << m_senderAddr;
     scdr << (uint32_t)m_controllerMode;
-    scdr << m_baudRate;
-    scdr << m_frameResponses;
+    scdr << m_baudrate;
 }
 
 void ib::sim::lin::idl::ControllerConfig::deserialize(eprosima::fastcdr::Cdr &dcdr)
@@ -391,8 +679,7 @@ void ib::sim::lin::idl::ControllerConfig::deserialize(eprosima::fastcdr::Cdr &dc
         dcdr >> enum_value;
         m_controllerMode = (ib::sim::lin::idl::ControllerMode)enum_value;
     }
-    dcdr >> m_baudRate;
-    dcdr >> m_frameResponses;
+    dcdr >> m_baudrate;
 }
 
 size_t ib::sim::lin::idl::ControllerConfig::getKeyMaxCdrSerializedSize(size_t current_alignment)
@@ -400,7 +687,6 @@ size_t ib::sim::lin::idl::ControllerConfig::getKeyMaxCdrSerializedSize(size_t cu
 	size_t current_align = current_alignment;
             
      current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
-
 
 
 
@@ -418,292 +704,66 @@ void ib::sim::lin::idl::ControllerConfig::serializeKey(eprosima::fastcdr::Cdr &s
 	 scdr << m_senderAddr;  
 	 
 	 
-	 
 }
-
-ib::sim::lin::idl::Transmission::Transmission()
+ib::sim::lin::idl::SlaveResponseConfig::SlaveResponseConfig()
 {
 
-    m_timestampNs = 0;
+    m_linId = 0;
 
+    m_responseMode = ib::sim::lin::idl::Unused;
 
-    m_status = ib::sim::lin::idl::NOT_OK;
+    m_checksumModel = ib::sim::lin::idl::Undefined;
+
+    m_payloadLength = 0;
 
 
 }
 
-ib::sim::lin::idl::Transmission::~Transmission()
+ib::sim::lin::idl::SlaveResponseConfig::~SlaveResponseConfig()
 {
 }
 
-ib::sim::lin::idl::Transmission::Transmission(const Transmission &x)
+ib::sim::lin::idl::SlaveResponseConfig::SlaveResponseConfig(const SlaveResponseConfig &x)
 {
     m_senderAddr = x.m_senderAddr;
-    m_timestampNs = x.m_timestampNs;
-    m_frame = x.m_frame;
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_responseMode = x.m_responseMode;
+    m_checksumModel = x.m_checksumModel;
+    m_payloadLength = x.m_payloadLength;
 }
 
-ib::sim::lin::idl::Transmission::Transmission(Transmission &&x)
+ib::sim::lin::idl::SlaveResponseConfig::SlaveResponseConfig(SlaveResponseConfig &&x)
 {
     m_senderAddr = std::move(x.m_senderAddr);
-    m_timestampNs = x.m_timestampNs;
-    m_frame = std::move(x.m_frame);
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_responseMode = x.m_responseMode;
+    m_checksumModel = x.m_checksumModel;
+    m_payloadLength = x.m_payloadLength;
 }
 
-ib::sim::lin::idl::Transmission& ib::sim::lin::idl::Transmission::operator=(const Transmission &x)
+ib::sim::lin::idl::SlaveResponseConfig& ib::sim::lin::idl::SlaveResponseConfig::operator=(const SlaveResponseConfig &x)
 {
     m_senderAddr = x.m_senderAddr;
-    m_timestampNs = x.m_timestampNs;
-    m_frame = x.m_frame;
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_responseMode = x.m_responseMode;
+    m_checksumModel = x.m_checksumModel;
+    m_payloadLength = x.m_payloadLength;
 
     return *this;
 }
 
-ib::sim::lin::idl::Transmission& ib::sim::lin::idl::Transmission::operator=(Transmission &&x)
+ib::sim::lin::idl::SlaveResponseConfig& ib::sim::lin::idl::SlaveResponseConfig::operator=(SlaveResponseConfig &&x)
 {
     m_senderAddr = std::move(x.m_senderAddr);
-    m_timestampNs = x.m_timestampNs;
-    m_frame = std::move(x.m_frame);
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_responseMode = x.m_responseMode;
+    m_checksumModel = x.m_checksumModel;
+    m_payloadLength = x.m_payloadLength;
 
     return *this;
 }
 
-size_t ib::sim::lin::idl::Transmission::getMaxCdrSerializedSize(size_t current_alignment)
-{
-    size_t initial_alignment = current_alignment;
-
-    current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
-    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
-
-
-    current_alignment += ib::sim::lin::idl::Frame::getMaxCdrSerializedSize(current_alignment);
-    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
-
-
-
-    return current_alignment - initial_alignment;
-}
-
-size_t ib::sim::lin::idl::Transmission::getCdrSerializedSize(const ib::sim::lin::idl::Transmission& data, size_t current_alignment)
-{
-    (void)data;
-    size_t initial_alignment = current_alignment;
-
-    current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
-    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
-
-
-    current_alignment += ib::sim::lin::idl::Frame::getCdrSerializedSize(data.frame(), current_alignment);
-    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
-
-
-
-    return current_alignment - initial_alignment;
-}
-
-void ib::sim::lin::idl::Transmission::serialize(eprosima::fastcdr::Cdr &scdr) const
-{
-    scdr << m_senderAddr;
-    scdr << m_timestampNs;
-    scdr << m_frame;
-    scdr << (uint32_t)m_status;
-}
-
-void ib::sim::lin::idl::Transmission::deserialize(eprosima::fastcdr::Cdr &dcdr)
-{
-    dcdr >> m_senderAddr;
-    dcdr >> m_timestampNs;
-    dcdr >> m_frame;
-    {
-        uint32_t enum_value = 0;
-        dcdr >> enum_value;
-        m_status = (ib::sim::lin::idl::FrameStatus)enum_value;
-    }
-}
-
-size_t ib::sim::lin::idl::Transmission::getKeyMaxCdrSerializedSize(size_t current_alignment)
-{
-	size_t current_align = current_alignment;
-            
-     current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
-
-
-
-
-    return current_align;
-}
-
-bool ib::sim::lin::idl::Transmission::isKeyDefined()
-{
-    return true;
-}
-
-void ib::sim::lin::idl::Transmission::serializeKey(eprosima::fastcdr::Cdr &scdr) const
-{
-	(void) scdr;
-	 scdr << m_senderAddr;  
-	 
-	 
-	 
-}
-ib::sim::lin::idl::SendFrameRequest::SendFrameRequest()
-{
-
-
-    m_responseType = ib::sim::lin::idl::MasterResponse;
-
-
-}
-
-ib::sim::lin::idl::SendFrameRequest::~SendFrameRequest()
-{
-}
-
-ib::sim::lin::idl::SendFrameRequest::SendFrameRequest(const SendFrameRequest &x)
-{
-    m_senderAddr = x.m_senderAddr;
-    m_frame = x.m_frame;
-    m_responseType = x.m_responseType;
-}
-
-ib::sim::lin::idl::SendFrameRequest::SendFrameRequest(SendFrameRequest &&x)
-{
-    m_senderAddr = std::move(x.m_senderAddr);
-    m_frame = std::move(x.m_frame);
-    m_responseType = x.m_responseType;
-}
-
-ib::sim::lin::idl::SendFrameRequest& ib::sim::lin::idl::SendFrameRequest::operator=(const SendFrameRequest &x)
-{
-    m_senderAddr = x.m_senderAddr;
-    m_frame = x.m_frame;
-    m_responseType = x.m_responseType;
-
-    return *this;
-}
-
-ib::sim::lin::idl::SendFrameRequest& ib::sim::lin::idl::SendFrameRequest::operator=(SendFrameRequest &&x)
-{
-    m_senderAddr = std::move(x.m_senderAddr);
-    m_frame = std::move(x.m_frame);
-    m_responseType = x.m_responseType;
-
-    return *this;
-}
-
-size_t ib::sim::lin::idl::SendFrameRequest::getMaxCdrSerializedSize(size_t current_alignment)
-{
-    size_t initial_alignment = current_alignment;
-
-    current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
-    current_alignment += ib::sim::lin::idl::Frame::getMaxCdrSerializedSize(current_alignment);
-    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
-
-
-
-    return current_alignment - initial_alignment;
-}
-
-size_t ib::sim::lin::idl::SendFrameRequest::getCdrSerializedSize(const ib::sim::lin::idl::SendFrameRequest& data, size_t current_alignment)
-{
-    (void)data;
-    size_t initial_alignment = current_alignment;
-
-    current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
-    current_alignment += ib::sim::lin::idl::Frame::getCdrSerializedSize(data.frame(), current_alignment);
-    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
-
-
-
-    return current_alignment - initial_alignment;
-}
-
-void ib::sim::lin::idl::SendFrameRequest::serialize(eprosima::fastcdr::Cdr &scdr) const
-{
-    scdr << m_senderAddr;
-    scdr << m_frame;
-    scdr << (uint32_t)m_responseType;
-}
-
-void ib::sim::lin::idl::SendFrameRequest::deserialize(eprosima::fastcdr::Cdr &dcdr)
-{
-    dcdr >> m_senderAddr;
-    dcdr >> m_frame;
-    {
-        uint32_t enum_value = 0;
-        dcdr >> enum_value;
-        m_responseType = (ib::sim::lin::idl::FrameResponseType)enum_value;
-    }
-}
-
-size_t ib::sim::lin::idl::SendFrameRequest::getKeyMaxCdrSerializedSize(size_t current_alignment)
-{
-	size_t current_align = current_alignment;
-            
-     current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
-
-
-
-    return current_align;
-}
-
-bool ib::sim::lin::idl::SendFrameRequest::isKeyDefined()
-{
-    return true;
-}
-
-void ib::sim::lin::idl::SendFrameRequest::serializeKey(eprosima::fastcdr::Cdr &scdr) const
-{
-	(void) scdr;
-	 scdr << m_senderAddr;  
-	 
-	 
-}
-ib::sim::lin::idl::SendFrameHeaderRequest::SendFrameHeaderRequest()
-{
-
-    m_id = 0;
-
-
-}
-
-ib::sim::lin::idl::SendFrameHeaderRequest::~SendFrameHeaderRequest()
-{
-}
-
-ib::sim::lin::idl::SendFrameHeaderRequest::SendFrameHeaderRequest(const SendFrameHeaderRequest &x)
-{
-    m_senderAddr = x.m_senderAddr;
-    m_id = x.m_id;
-}
-
-ib::sim::lin::idl::SendFrameHeaderRequest::SendFrameHeaderRequest(SendFrameHeaderRequest &&x)
-{
-    m_senderAddr = std::move(x.m_senderAddr);
-    m_id = x.m_id;
-}
-
-ib::sim::lin::idl::SendFrameHeaderRequest& ib::sim::lin::idl::SendFrameHeaderRequest::operator=(const SendFrameHeaderRequest &x)
-{
-    m_senderAddr = x.m_senderAddr;
-    m_id = x.m_id;
-
-    return *this;
-}
-
-ib::sim::lin::idl::SendFrameHeaderRequest& ib::sim::lin::idl::SendFrameHeaderRequest::operator=(SendFrameHeaderRequest &&x)
-{
-    m_senderAddr = std::move(x.m_senderAddr);
-    m_id = x.m_id;
-
-    return *this;
-}
-
-size_t ib::sim::lin::idl::SendFrameHeaderRequest::getMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveResponseConfig::getMaxCdrSerializedSize(size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
 
@@ -711,11 +771,20 @@ size_t ib::sim::lin::idl::SendFrameHeaderRequest::getMaxCdrSerializedSize(size_t
     current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
 
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
 
     return current_alignment - initial_alignment;
 }
 
-size_t ib::sim::lin::idl::SendFrameHeaderRequest::getCdrSerializedSize(const ib::sim::lin::idl::SendFrameHeaderRequest& data, size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveResponseConfig::getCdrSerializedSize(const ib::sim::lin::idl::SlaveResponseConfig& data, size_t current_alignment)
 {
     (void)data;
     size_t initial_alignment = current_alignment;
@@ -724,83 +793,112 @@ size_t ib::sim::lin::idl::SendFrameHeaderRequest::getCdrSerializedSize(const ib:
     current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
 
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
 
     return current_alignment - initial_alignment;
 }
 
-void ib::sim::lin::idl::SendFrameHeaderRequest::serialize(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::SlaveResponseConfig::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
     scdr << m_senderAddr;
-    scdr << m_id;
+    scdr << m_linId;
+    scdr << (uint32_t)m_responseMode;
+    scdr << (uint32_t)m_checksumModel;
+    scdr << m_payloadLength;
 }
 
-void ib::sim::lin::idl::SendFrameHeaderRequest::deserialize(eprosima::fastcdr::Cdr &dcdr)
+void ib::sim::lin::idl::SlaveResponseConfig::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
     dcdr >> m_senderAddr;
-    dcdr >> m_id;
+    dcdr >> m_linId;
+    {
+        uint32_t enum_value = 0;
+        dcdr >> enum_value;
+        m_responseMode = (ib::sim::lin::idl::ResponseMode)enum_value;
+    }
+    {
+        uint32_t enum_value = 0;
+        dcdr >> enum_value;
+        m_checksumModel = (ib::sim::lin::idl::ChecksumModel)enum_value;
+    }
+    dcdr >> m_payloadLength;
 }
 
-size_t ib::sim::lin::idl::SendFrameHeaderRequest::getKeyMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveResponseConfig::getKeyMaxCdrSerializedSize(size_t current_alignment)
 {
 	size_t current_align = current_alignment;
             
      current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
 
 
+
+
+
     return current_align;
 }
 
-bool ib::sim::lin::idl::SendFrameHeaderRequest::isKeyDefined()
+bool ib::sim::lin::idl::SlaveResponseConfig::isKeyDefined()
 {
     return true;
 }
 
-void ib::sim::lin::idl::SendFrameHeaderRequest::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::SlaveResponseConfig::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 {
 	(void) scdr;
 	 scdr << m_senderAddr;  
 	 
+	 
+	 
+	 
 }
-ib::sim::lin::idl::FrameResponseUpdate::FrameResponseUpdate()
+ib::sim::lin::idl::SlaveConfiguration::SlaveConfiguration()
 {
 
 
 
 }
 
-ib::sim::lin::idl::FrameResponseUpdate::~FrameResponseUpdate()
+ib::sim::lin::idl::SlaveConfiguration::~SlaveConfiguration()
 {
 }
 
-ib::sim::lin::idl::FrameResponseUpdate::FrameResponseUpdate(const FrameResponseUpdate &x)
+ib::sim::lin::idl::SlaveConfiguration::SlaveConfiguration(const SlaveConfiguration &x)
 {
     m_senderAddr = x.m_senderAddr;
-    m_frameResponses = x.m_frameResponses;
+    m_responseConfigs = x.m_responseConfigs;
 }
 
-ib::sim::lin::idl::FrameResponseUpdate::FrameResponseUpdate(FrameResponseUpdate &&x)
+ib::sim::lin::idl::SlaveConfiguration::SlaveConfiguration(SlaveConfiguration &&x)
 {
     m_senderAddr = std::move(x.m_senderAddr);
-    m_frameResponses = std::move(x.m_frameResponses);
+    m_responseConfigs = std::move(x.m_responseConfigs);
 }
 
-ib::sim::lin::idl::FrameResponseUpdate& ib::sim::lin::idl::FrameResponseUpdate::operator=(const FrameResponseUpdate &x)
+ib::sim::lin::idl::SlaveConfiguration& ib::sim::lin::idl::SlaveConfiguration::operator=(const SlaveConfiguration &x)
 {
     m_senderAddr = x.m_senderAddr;
-    m_frameResponses = x.m_frameResponses;
+    m_responseConfigs = x.m_responseConfigs;
 
     return *this;
 }
 
-ib::sim::lin::idl::FrameResponseUpdate& ib::sim::lin::idl::FrameResponseUpdate::operator=(FrameResponseUpdate &&x)
+ib::sim::lin::idl::SlaveConfiguration& ib::sim::lin::idl::SlaveConfiguration::operator=(SlaveConfiguration &&x)
 {
     m_senderAddr = std::move(x.m_senderAddr);
-    m_frameResponses = std::move(x.m_frameResponses);
+    m_responseConfigs = std::move(x.m_responseConfigs);
 
     return *this;
 }
 
-size_t ib::sim::lin::idl::FrameResponseUpdate::getMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveConfiguration::getMaxCdrSerializedSize(size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
 
@@ -810,13 +908,13 @@ size_t ib::sim::lin::idl::FrameResponseUpdate::getMaxCdrSerializedSize(size_t cu
 
     for(size_t a = 0; a < 100; ++a)
     {
-        current_alignment += ib::sim::lin::idl::FrameResponse::getMaxCdrSerializedSize(current_alignment);}
+        current_alignment += ib::sim::lin::idl::SlaveResponseConfig::getMaxCdrSerializedSize(current_alignment);}
 
 
     return current_alignment - initial_alignment;
 }
 
-size_t ib::sim::lin::idl::FrameResponseUpdate::getCdrSerializedSize(const ib::sim::lin::idl::FrameResponseUpdate& data, size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveConfiguration::getCdrSerializedSize(const ib::sim::lin::idl::SlaveConfiguration& data, size_t current_alignment)
 {
     (void)data;
     size_t initial_alignment = current_alignment;
@@ -825,27 +923,27 @@ size_t ib::sim::lin::idl::FrameResponseUpdate::getCdrSerializedSize(const ib::si
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
 
-    for(size_t a = 0; a < data.frameResponses().size(); ++a)
+    for(size_t a = 0; a < data.responseConfigs().size(); ++a)
     {
-        current_alignment += ib::sim::lin::idl::FrameResponse::getCdrSerializedSize(data.frameResponses().at(a), current_alignment);}
+        current_alignment += ib::sim::lin::idl::SlaveResponseConfig::getCdrSerializedSize(data.responseConfigs().at(a), current_alignment);}
 
 
     return current_alignment - initial_alignment;
 }
 
-void ib::sim::lin::idl::FrameResponseUpdate::serialize(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::SlaveConfiguration::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
     scdr << m_senderAddr;
-    scdr << m_frameResponses;
+    scdr << m_responseConfigs;
 }
 
-void ib::sim::lin::idl::FrameResponseUpdate::deserialize(eprosima::fastcdr::Cdr &dcdr)
+void ib::sim::lin::idl::SlaveConfiguration::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
     dcdr >> m_senderAddr;
-    dcdr >> m_frameResponses;
+    dcdr >> m_responseConfigs;
 }
 
-size_t ib::sim::lin::idl::FrameResponseUpdate::getKeyMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveConfiguration::getKeyMaxCdrSerializedSize(size_t current_alignment)
 {
 	size_t current_align = current_alignment;
             
@@ -855,69 +953,86 @@ size_t ib::sim::lin::idl::FrameResponseUpdate::getKeyMaxCdrSerializedSize(size_t
     return current_align;
 }
 
-bool ib::sim::lin::idl::FrameResponseUpdate::isKeyDefined()
+bool ib::sim::lin::idl::SlaveConfiguration::isKeyDefined()
 {
     return true;
 }
 
-void ib::sim::lin::idl::FrameResponseUpdate::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::SlaveConfiguration::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 {
 	(void) scdr;
 	 scdr << m_senderAddr;  
 	 
 }
-ib::sim::lin::idl::ControllerStatusUpdate::ControllerStatusUpdate()
+ib::sim::lin::idl::SlaveResponse::SlaveResponse()
 {
 
-    m_timestampNs = 0;
+    m_linId = 0;
 
-    m_status = ib::sim::lin::idl::Unknown;
+    m_payloadLength = 0;
+
+    memset(&m_payload, 0, (8) * 1);
+    m_checksumModel = ib::sim::lin::idl::Undefined;
 
 
 }
 
-ib::sim::lin::idl::ControllerStatusUpdate::~ControllerStatusUpdate()
+ib::sim::lin::idl::SlaveResponse::~SlaveResponse()
 {
 }
 
-ib::sim::lin::idl::ControllerStatusUpdate::ControllerStatusUpdate(const ControllerStatusUpdate &x)
+ib::sim::lin::idl::SlaveResponse::SlaveResponse(const SlaveResponse &x)
 {
     m_senderAddr = x.m_senderAddr;
-    m_timestampNs = x.m_timestampNs;
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = x.m_payload;
+    m_checksumModel = x.m_checksumModel;
 }
 
-ib::sim::lin::idl::ControllerStatusUpdate::ControllerStatusUpdate(ControllerStatusUpdate &&x)
+ib::sim::lin::idl::SlaveResponse::SlaveResponse(SlaveResponse &&x)
 {
     m_senderAddr = std::move(x.m_senderAddr);
-    m_timestampNs = x.m_timestampNs;
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = std::move(x.m_payload);
+    m_checksumModel = x.m_checksumModel;
 }
 
-ib::sim::lin::idl::ControllerStatusUpdate& ib::sim::lin::idl::ControllerStatusUpdate::operator=(const ControllerStatusUpdate &x)
+ib::sim::lin::idl::SlaveResponse& ib::sim::lin::idl::SlaveResponse::operator=(const SlaveResponse &x)
 {
     m_senderAddr = x.m_senderAddr;
-    m_timestampNs = x.m_timestampNs;
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = x.m_payload;
+    m_checksumModel = x.m_checksumModel;
 
     return *this;
 }
 
-ib::sim::lin::idl::ControllerStatusUpdate& ib::sim::lin::idl::ControllerStatusUpdate::operator=(ControllerStatusUpdate &&x)
+ib::sim::lin::idl::SlaveResponse& ib::sim::lin::idl::SlaveResponse::operator=(SlaveResponse &&x)
 {
     m_senderAddr = std::move(x.m_senderAddr);
-    m_timestampNs = x.m_timestampNs;
-    m_status = x.m_status;
+    m_linId = x.m_linId;
+    m_payloadLength = x.m_payloadLength;
+    m_payload = std::move(x.m_payload);
+    m_checksumModel = x.m_checksumModel;
 
     return *this;
 }
 
-size_t ib::sim::lin::idl::ControllerStatusUpdate::getMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveResponse::getMaxCdrSerializedSize(size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
 
     current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
-    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
+    current_alignment += ((8) * 1) + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
 
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
@@ -927,14 +1042,19 @@ size_t ib::sim::lin::idl::ControllerStatusUpdate::getMaxCdrSerializedSize(size_t
     return current_alignment - initial_alignment;
 }
 
-size_t ib::sim::lin::idl::ControllerStatusUpdate::getCdrSerializedSize(const ib::sim::lin::idl::ControllerStatusUpdate& data, size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveResponse::getCdrSerializedSize(const ib::sim::lin::idl::SlaveResponse& data, size_t current_alignment)
 {
     (void)data;
     size_t initial_alignment = current_alignment;
 
     current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
-    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
+
+    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+
+
+    current_alignment += ((8) * 1) + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
 
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
@@ -943,25 +1063,29 @@ size_t ib::sim::lin::idl::ControllerStatusUpdate::getCdrSerializedSize(const ib:
     return current_alignment - initial_alignment;
 }
 
-void ib::sim::lin::idl::ControllerStatusUpdate::serialize(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::SlaveResponse::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
     scdr << m_senderAddr;
-    scdr << m_timestampNs;
-    scdr << (uint32_t)m_status;
+    scdr << m_linId;
+    scdr << m_payloadLength;
+    scdr << m_payload;
+    scdr << (uint32_t)m_checksumModel;
 }
 
-void ib::sim::lin::idl::ControllerStatusUpdate::deserialize(eprosima::fastcdr::Cdr &dcdr)
+void ib::sim::lin::idl::SlaveResponse::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
     dcdr >> m_senderAddr;
-    dcdr >> m_timestampNs;
+    dcdr >> m_linId;
+    dcdr >> m_payloadLength;
+    dcdr >> m_payload;
     {
         uint32_t enum_value = 0;
         dcdr >> enum_value;
-        m_status = (ib::sim::lin::idl::ControllerStatus)enum_value;
+        m_checksumModel = (ib::sim::lin::idl::ChecksumModel)enum_value;
     }
 }
 
-size_t ib::sim::lin::idl::ControllerStatusUpdate::getKeyMaxCdrSerializedSize(size_t current_alignment)
+size_t ib::sim::lin::idl::SlaveResponse::getKeyMaxCdrSerializedSize(size_t current_alignment)
 {
 	size_t current_align = current_alignment;
             
@@ -969,117 +1093,23 @@ size_t ib::sim::lin::idl::ControllerStatusUpdate::getKeyMaxCdrSerializedSize(siz
 
 
 
-    return current_align;
-}
-
-bool ib::sim::lin::idl::ControllerStatusUpdate::isKeyDefined()
-{
-    return true;
-}
-
-void ib::sim::lin::idl::ControllerStatusUpdate::serializeKey(eprosima::fastcdr::Cdr &scdr) const
-{
-	(void) scdr;
-	 scdr << m_senderAddr;  
-	 
-	 
-}
-ib::sim::lin::idl::WakeupPulse::WakeupPulse()
-{
-
-    m_timestampNs = 0;
-
-
-}
-
-ib::sim::lin::idl::WakeupPulse::~WakeupPulse()
-{
-}
-
-ib::sim::lin::idl::WakeupPulse::WakeupPulse(const WakeupPulse &x)
-{
-    m_senderAddr = x.m_senderAddr;
-    m_timestampNs = x.m_timestampNs;
-}
-
-ib::sim::lin::idl::WakeupPulse::WakeupPulse(WakeupPulse &&x)
-{
-    m_senderAddr = std::move(x.m_senderAddr);
-    m_timestampNs = x.m_timestampNs;
-}
-
-ib::sim::lin::idl::WakeupPulse& ib::sim::lin::idl::WakeupPulse::operator=(const WakeupPulse &x)
-{
-    m_senderAddr = x.m_senderAddr;
-    m_timestampNs = x.m_timestampNs;
-
-    return *this;
-}
-
-ib::sim::lin::idl::WakeupPulse& ib::sim::lin::idl::WakeupPulse::operator=(WakeupPulse &&x)
-{
-    m_senderAddr = std::move(x.m_senderAddr);
-    m_timestampNs = x.m_timestampNs;
-
-    return *this;
-}
-
-size_t ib::sim::lin::idl::WakeupPulse::getMaxCdrSerializedSize(size_t current_alignment)
-{
-    size_t initial_alignment = current_alignment;
-
-    current_alignment += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_alignment);
-    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
-
-
-
-    return current_alignment - initial_alignment;
-}
-
-size_t ib::sim::lin::idl::WakeupPulse::getCdrSerializedSize(const ib::sim::lin::idl::WakeupPulse& data, size_t current_alignment)
-{
-    (void)data;
-    size_t initial_alignment = current_alignment;
-
-    current_alignment += ib::mw::idl::EndpointAddress::getCdrSerializedSize(data.senderAddr(), current_alignment);
-    current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
-
-
-
-    return current_alignment - initial_alignment;
-}
-
-void ib::sim::lin::idl::WakeupPulse::serialize(eprosima::fastcdr::Cdr &scdr) const
-{
-    scdr << m_senderAddr;
-    scdr << m_timestampNs;
-}
-
-void ib::sim::lin::idl::WakeupPulse::deserialize(eprosima::fastcdr::Cdr &dcdr)
-{
-    dcdr >> m_senderAddr;
-    dcdr >> m_timestampNs;
-}
-
-size_t ib::sim::lin::idl::WakeupPulse::getKeyMaxCdrSerializedSize(size_t current_alignment)
-{
-	size_t current_align = current_alignment;
-            
-     current_align += ib::mw::idl::EndpointAddress::getMaxCdrSerializedSize(current_align); 
 
 
     return current_align;
 }
 
-bool ib::sim::lin::idl::WakeupPulse::isKeyDefined()
+bool ib::sim::lin::idl::SlaveResponse::isKeyDefined()
 {
     return true;
 }
 
-void ib::sim::lin::idl::WakeupPulse::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+void ib::sim::lin::idl::SlaveResponse::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 {
 	(void) scdr;
 	 scdr << m_senderAddr;  
+	 
+	 
+	 
 	 
 }
 
