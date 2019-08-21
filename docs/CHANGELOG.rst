@@ -1,11 +1,11 @@
-VIB Changelog
+Vector Integration Bus Changelog
 ================================
 
 All notable changes to the IntegrationBus project shall be documented in this file.
 
 The format is based on [Keep a Changelog] (http://keepachangelog.com/en/1.0.0/).
 
-[unreleased] - yyyy-mm-dd
+[Sprint-31] - 2019-08-14
 ------------------------
 Added
 ~~~~~
@@ -16,11 +16,6 @@ Added
 Changed
 ~~~~~~~
 - Upgrade Fast-RTPS to version v1.8.1. This improves stability on Linux.
-
-Fixed
-~~~~~
-- Fixed a crash in the IbLauncher when the IbConfig did not specify a
-  MiddlewareConfig or an ActiveMiddleware.
 
 
 Compatibility with Sprint-30

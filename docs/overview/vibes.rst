@@ -1,13 +1,21 @@
-========================
-VIBE Network Simulator
+==========================================
+Vector Integration Bus Extensions (VIBEs)
+==========================================
+
+VIBEs are extensions developed by Vector for the Integration Bus. Currently, they only contain
+the Network Simulator.
+
+.. contents::
+
+
+Vector Network Simulator
 ========================
 
-The VIBE Network Simulator supports simulation of CAN, LIN, Ethernet,
-and FlexRay networks. Compared to the simple, functional simulation,
-the network simulator adds the following details:
+The Vector Network Simulator supports simulation of CAN, LIN, Ethernet, and FlexRay networks.
+Compared to the simple, functional simulation, the network simulator adds the following details:
 
 CAN / CAN FD
-------------------
+^^^^^^^^^^^^
 
 Delay Model Features:
 
@@ -22,7 +30,7 @@ Transmission Acknowledgement Features:
   a CAN controller entering error passive state.
 
 Ethernet
-------------------
+^^^^^^^^
 
 Ethernet simulation is based point-to-point connection between two controllers with the
 following features:
@@ -40,7 +48,7 @@ following features:
   lower priority will be dropped first in case of congestion.
 
 FlexRay
-------------------
+^^^^^^^
 
 The FlexRay simulation models the synchronous transmission of frames in a FlexRay cluster.
 
@@ -53,7 +61,7 @@ The FlexRay simulation models the synchronous transmission of frames in a FlexRa
 * Requires valid FlexRay cluster and node parameters.
 
 LIN
-------------------
+^^^
 
 The LIN simulation has the following features:
 

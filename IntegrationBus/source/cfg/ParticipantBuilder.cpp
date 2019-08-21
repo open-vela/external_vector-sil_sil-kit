@@ -131,10 +131,9 @@ auto ParticipantBuilder::WithSyncType(SyncType syncType) -> ParticipantBuilder&
     return *this;
 }
 
-auto ParticipantBuilder::AsSyncMaster() -> ParticipantBuilder&
+void ParticipantBuilder::AsSyncMaster()
 {
     config.isSyncMaster = true;
-    return *this;
 }
 
 auto ParticipantBuilder::MakeQualifiedName(std::string controllerName) const -> std::string
