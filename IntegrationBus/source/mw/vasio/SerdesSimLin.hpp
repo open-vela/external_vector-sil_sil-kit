@@ -10,94 +10,86 @@ namespace ib {
 namespace sim {
 namespace lin {
 
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const Frame& frame)
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const Payload& payload)
 {
     buffer
-        << frame.id
-        << frame.checksumModel
-        << frame.dataLength
-        << frame.data;
+        << payload.size
+        << payload.data;
     return buffer;
 }
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, Frame& frame)
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, Payload& payload)
 {
     buffer
-        >> frame.id
-        >> frame.checksumModel
-        >> frame.dataLength
-        >> frame.data;
+        >> payload.size
+        >> payload.data;
     return buffer;
 }
 
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const SendFrameRequest& frame)
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const LinMessage& msg)
 {
     buffer
-        << frame.frame
-        << frame.responseType;
+        << msg.status
+        << msg.timestamp
+        << msg.linId
+        << msg.payload
+        << msg.checksumModel;
     return buffer;
 }
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, SendFrameRequest& frame)
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, LinMessage& msg)
 {
     buffer
-        >> frame.frame
-        >> frame.responseType;
-    return buffer;
-}
-
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const SendFrameHeaderRequest& header)
-{
-    buffer
-        << header.id;
-    return buffer;
-}
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, SendFrameHeaderRequest& header)
-{
-    buffer
-        >> header.id;
-    return buffer;
-}
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const Transmission& transmission)
-{
-    buffer
-        << transmission.timestamp
-        << transmission.frame
-        << transmission.status;
-    return buffer;
-}
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, Transmission& transmission)
-{
-    buffer
-        >> transmission.timestamp
-        >> transmission.frame
-        >> transmission.status;
+        >> msg.status
+        >> msg.timestamp
+        >> msg.linId
+        >> msg.payload
+        >> msg.checksumModel;
     return buffer;
 }
 
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const WakeupPulse& pulse)
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const RxRequest& request)
 {
     buffer
-        << pulse.timestamp;
+        << request.linId
+        << request.payloadLength
+        << request.checksumModel;
     return buffer;
 }
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, WakeupPulse& pulse)
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, RxRequest& request)
 {
     buffer
-        >> pulse.timestamp;
+        >> request.linId
+        >> request.payloadLength
+        >> request.checksumModel;
     return buffer;
 }
 
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const FrameResponse& response)
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const TxAcknowledge& ack)
 {
     buffer
-        << response.frame
-        << response.responseMode;
+        << ack.timestamp
+        << ack.linId
+        << ack.status;
     return buffer;
 }
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, FrameResponse& response)
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, TxAcknowledge& ack)
 {
     buffer
-        >> response.frame
-        >> response.responseMode;
+        >> ack.timestamp
+        >> ack.linId
+        >> ack.status;
+    return buffer;
+}
+
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const WakeupRequest& request)
+{
+    buffer
+        << request.timestamp;
+    return buffer;
+}
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, WakeupRequest& request)
+{
+    buffer
+        >> request.timestamp;
     return buffer;
 }
 
@@ -105,47 +97,65 @@ inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const Co
 {
     buffer
         << config.controllerMode
-        << config.baudRate
-        << config.frameResponses;
+        << config.baudrate;
     return buffer;
 }
 inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, ControllerConfig& config)
 {
     buffer
         >> config.controllerMode
-        >> config.baudRate
-        >> config.frameResponses;
+        >> config.baudrate;
     return buffer;
 }
 
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const ControllerStatusUpdate& msg)
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const SlaveResponseConfig& config)
 {
     buffer
-        << msg.timestamp
-        << msg.status;
+        << config.linId
+        << config.responseMode
+        << config.checksumModel
+        << config.payloadLength;
     return buffer;
 }
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, ControllerStatusUpdate& msg)
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, SlaveResponseConfig& config)
 {
     buffer
-        >> msg.timestamp
-        >> msg.status;
-    return buffer;
-}
-
-inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const FrameResponseUpdate& update)
-{
-    buffer
-        << update.frameResponses;
-    return buffer;
-}
-inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, FrameResponseUpdate& update)
-{
-    buffer
-        >> update.frameResponses;
+        >> config.linId
+        >> config.responseMode
+        >> config.checksumModel
+        >> config.payloadLength;
     return buffer;
 }
 
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const SlaveConfiguration& config)
+{
+    buffer
+        << config.responseConfigs;
+    return buffer;
+}
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, SlaveConfiguration& config)
+{
+    buffer
+        >> config.responseConfigs;
+    return buffer;
+}
+
+inline ib::mw::MessageBuffer& operator<<(ib::mw::MessageBuffer& buffer, const SlaveResponse& response)
+{
+    buffer
+        << response.linId
+        << response.payload
+        << response.checksumModel;
+    return buffer;
+}
+inline ib::mw::MessageBuffer& operator>>(ib::mw::MessageBuffer& buffer, SlaveResponse& response)
+{
+    buffer
+        >> response.linId
+        >> response.payload
+        >> response.checksumModel;
+    return buffer;
+}
 
 } // namespace lin
 } // namespace sim
