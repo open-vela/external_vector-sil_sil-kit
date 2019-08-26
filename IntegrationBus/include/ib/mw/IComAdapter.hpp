@@ -12,13 +12,6 @@
 #include "ib/mw/fwd_decl.hpp"
 #include "ib/sim/fwd_decl.hpp"
 
-namespace spdlog {
-namespace details {
-    struct log_msg;
-}
-    class logger;
-}
-
 namespace ib {
 namespace mw {
 
@@ -75,7 +68,7 @@ public:
     virtual auto GetParticipantController() -> sync::IParticipantController* = 0;
     virtual auto GetSystemMonitor() -> sync::ISystemMonitor* = 0;
     virtual auto GetSystemController() -> sync::ISystemController* = 0;
-    virtual auto GetLogger() -> std::shared_ptr<spdlog::logger>& = 0;
+    virtual auto GetLogger() -> logging::ILogger* = 0;
 
     virtual void RegisterCanSimulator(sim::can::IIbToCanSimulator* busSim) = 0;
     virtual void RegisterEthSimulator(sim::eth::IIbToEthSimulator* busSim) = 0;
@@ -108,13 +101,13 @@ public:
     virtual void SendIbMessage(EndpointAddress from, const sim::fr::TxBufferUpdate& msg) = 0;
     virtual void SendIbMessage(EndpointAddress from, const sim::fr::ControllerStatus& msg) = 0;
 
-    virtual void SendIbMessage(EndpointAddress from, const sim::lin::SendFrameRequest& msg) = 0;
-    virtual void SendIbMessage(EndpointAddress from, const sim::lin::SendFrameHeaderRequest& msg) = 0;
-    virtual void SendIbMessage(EndpointAddress from, const sim::lin::Transmission& msg) = 0;
-    virtual void SendIbMessage(EndpointAddress from, const sim::lin::WakeupPulse& msg) = 0;
+    virtual void SendIbMessage(EndpointAddress from, const sim::lin::LinMessage& msg) = 0;
+    virtual void SendIbMessage(EndpointAddress from, const sim::lin::RxRequest& msg) = 0;
+    virtual void SendIbMessage(EndpointAddress from, const sim::lin::TxAcknowledge& msg) = 0;
+    virtual void SendIbMessage(EndpointAddress from, const sim::lin::WakeupRequest& msg) = 0;
     virtual void SendIbMessage(EndpointAddress from, const sim::lin::ControllerConfig& msg) = 0;
-    virtual void SendIbMessage(EndpointAddress from, const sim::lin::ControllerStatusUpdate& msg) = 0;
-    virtual void SendIbMessage(EndpointAddress from, const sim::lin::FrameResponseUpdate& msg) = 0;
+    virtual void SendIbMessage(EndpointAddress from, const sim::lin::SlaveConfiguration& msg) = 0;
+    virtual void SendIbMessage(EndpointAddress from, const sim::lin::SlaveResponse& msg) = 0;
 
     virtual void SendIbMessage(EndpointAddress from, const sim::io::AnalogIoMessage& msg) = 0;
     virtual void SendIbMessage(EndpointAddress from, const sim::io::DigitalIoMessage& msg) = 0;

@@ -5,7 +5,6 @@
 #include "ib/sim/lin/ILinController.hpp"
 #include "ib/sim/lin/IIbToLinController.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <tuple>
 #include <unordered_map>
@@ -13,6 +12,8 @@
 
 #include "ib/mw/fwd_decl.hpp"
 #include "ib/sim/datatypes.hpp"
+
+#include "ib/mw/logging/ILogger.hpp"
 
 namespace spdlog {
 class logger;
@@ -38,6 +39,7 @@ public:
     LinController(LinController&&) = default;
     LinController(mw::IComAdapter* comAdapter);
 
+
 public:
     // ----------------------------------------
     // Operator Implementations
@@ -49,30 +51,36 @@ public:
     // Public interface methods
     //
     // ILinController
-    void Init(ControllerConfig config) override;
-    auto Status() const noexcept -> ControllerStatus override;
+    void SetMasterMode() override;
+    void SetSlaveMode() override;
+    void SetBaudRate(uint32_t rate) override;
 
-    void SendFrame(Frame frame, FrameResponseType responseType) override;
-    void SendFrameHeader(LinIdT linId) override;
-    void SetFrameResponse(Frame frame, FrameResponseMode mode) override;
-    void SetFrameResponses(std::vector<FrameResponse> responses) override;
+    void SetSleepMode() override;
+    void SetOperationalMode() override;
 
-    void GoToSleep() override;
-    void GoToSleepInternal() override;
-    void Wakeup() override;
-    void WakeupInternal() override;
+    // LIN Slaves
+    void SetSlaveConfiguration(const SlaveConfiguration& config) override;
+    void SetResponse(LinId linId, const Payload& payload) override;
+    void SetResponseWithChecksum(LinId linId, const Payload& payload, ChecksumModel checksumModel) override;
+    void RemoveResponse(LinId linId) override;
+    void SendWakeupRequest() override;
 
-    void RegisterFrameStatusHandler(FrameStatusHandler handler) override;
-    void RegisterGoToSleepHandler(GoToSleepHandler handler) override;
-    void RegisterWakeupHandler(WakeupHandler handler) override;
-    void RegisterFrameResponseUpdateHandler(FrameResponseUpdateHandler handler) override;
+    // LIN Masters
+    void SendMessage(const LinMessage& msg) override;
+    void RequestMessage(const RxRequest& request) override;
+    void SendGoToSleep() override;
+
+    void RegisterTxCompleteHandler(TxCompleteHandler handler) override;
+    void RegisterReceiveMessageHandler(ReceiveMessageHandler handler) override;
+    void RegisterWakeupRequestHandler(WakeupRequestHandler handler) override;
+    void RegisterSleepCommandHandler(SleepCommandHandler handler) override;
 
      // IIbToLinController
-     void ReceiveIbMessage(mw::EndpointAddress from, const Transmission& msg) override;
-     void ReceiveIbMessage(mw::EndpointAddress from, const WakeupPulse& msg) override;
+     void ReceiveIbMessage(mw::EndpointAddress from, const LinMessage& msg) override;
+     void ReceiveIbMessage(mw::EndpointAddress from, const WakeupRequest& msg) override;
      void ReceiveIbMessage(mw::EndpointAddress from, const ControllerConfig& msg) override;
-     void ReceiveIbMessage(mw::EndpointAddress from, const ControllerStatusUpdate& msg) override;
-     void ReceiveIbMessage(mw::EndpointAddress from, const FrameResponseUpdate& msg) override;
+     void ReceiveIbMessage(mw::EndpointAddress from, const SlaveConfiguration& msg) override;
+     void ReceiveIbMessage(mw::EndpointAddress from, const SlaveResponse& msg) override;
 
      void SetEndpointAddress(const mw::EndpointAddress& endpointAddress) override;
      auto EndpointAddress() const -> const mw::EndpointAddress& override;
@@ -80,60 +88,69 @@ public:
 private:
     // ----------------------------------------
     // private data types
-    struct LinNode
-    {
-        mw::EndpointAddress           ibAddress;
-        ControllerMode                controllerMode{ControllerMode::Inactive};
-        ControllerStatus              controllerStatus{ControllerStatus::Unknown};
-        std::array<FrameResponse, 64> responses;
+    template<typename... MsgT>
+    using CallbackVector = std::vector<CallbackT<MsgT...>>;
 
-        void UpdateResponses(std::vector<FrameResponse> responses_);
+    struct Response : SlaveResponseConfig
+    {
+        Payload payload{0, {}};
+    };
+
+    struct LinSlave
+    {
+        ControllerConfig config;
+        std::array<Response, 64> responses;
     };
 
 private:
     // ----------------------------------------
     // private methods
-    void SetControllerStatus(ControllerStatus status);
-    auto VeriyChecksum(const Frame& frame, FrameStatus status) -> FrameStatus;
+    template<typename MsgT>
+    void RegisterHandler(CallbackT<MsgT>&& handler);
+
+    template<typename MsgT>
+    void CallHandlers(const MsgT& msg);
 
     template <typename MsgT>
     inline void SendIbMessage(MsgT&& msg);
 
-    inline auto GetLinNode(mw::EndpointAddress addr) -> LinNode&;
+    void UpdateSlaveConfigurationImpl(mw::EndpointAddress from, const SlaveConfiguration& config);
+    void SetSlaveResponseImpl(mw::EndpointAddress from, const SlaveResponse& msg);
+
+    inline auto GetLinSlave(mw::EndpointAddress addr) -> LinSlave&;
     
 private:
     // ----------------------------------------
     // private members
     mw::IComAdapter* _comAdapter;
     mw::EndpointAddress _endpointAddr;
-    std::shared_ptr<spdlog::logger> _logger;
+    mw::logging::ILogger* _logger;
 
-    ControllerMode   _controllerMode{ControllerMode::Inactive};
-    ControllerStatus _controllerStatus{ControllerStatus::Unknown};
+    ControllerMode _configuredControllerMode{ControllerMode::Inactive}; // only modified by SetSlave/SetMasterMode, used to restore operational mode
+    ControllerMode _controllerMode{ControllerMode::Inactive}; // currently active controller mode
+    
+    std::tuple<
+        CallbackVector<MessageStatus>,
+        CallbackVector<LinMessage>
+    > _callbacks;
+    CallbackVector<> _gotosleepHandlers;
+    CallbackVector<> _wakeuprequestHandlers;
 
-    std::vector<LinNode> _linNodes;
+    std::unordered_map<uint32_t, LinSlave> _linSlaves;
 
-    std::vector<FrameStatusHandler>         _frameStatusHandler;
-    std::vector<GoToSleepHandler>           _goToSleepHandler;
-    std::vector<WakeupHandler>              _wakeupHandler;
-    std::vector<FrameResponseUpdateHandler> _frameResponseUpdateHandler;
+    static_assert(
+        sizeof(mw::EndpointAddress::participant) + sizeof(mw::EndpointAddress::endpoint) == sizeof(decltype(_linSlaves)::key_type),
+        "LinController: _linSlave key_type does not fit an EndpointAddress!"
+        );
 };
 
 // ================================================================================
 //  Inline Implementations
 // ================================================================================
-auto LinController::GetLinNode(mw::EndpointAddress addr) -> LinNode&
+auto LinController::GetLinSlave(mw::EndpointAddress addr) -> LinSlave&
 {
-    auto iter = std::lower_bound(_linNodes.begin(), _linNodes.end(), addr,
-        [](const LinNode& lhs, const mw::EndpointAddress& addr) { return lhs.ibAddress < addr; }
-    );
-    if (iter == _linNodes.end() || iter->ibAddress != addr)
-    {
-        LinNode node;
-        node.ibAddress = addr;
-        iter = _linNodes.insert(iter, node);
-    }
-    return *iter;
+    uint32_t slaveKey = (addr.participant << sizeof(mw::EndpointAddress::endpoint) * 8) | addr.endpoint;
+    return _linSlaves[slaveKey];
 }
 
 } // namespace lin

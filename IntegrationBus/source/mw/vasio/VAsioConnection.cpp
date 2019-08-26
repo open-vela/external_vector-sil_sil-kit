@@ -47,27 +47,11 @@ void VAsioConnection::JoinDomain(uint32_t domainId)
     registryInfo.acceptorHost = vasioConfig.registry.hostname;
     registryInfo.acceptorPort = static_cast<uint16_t>(vasioConfig.registry.port + domainId);
 
-    std::cout << "INFO: Connecting to VAsio registry\n";
+    std::cout << "INFO: Connecting to registry\n";
 
     auto registry = std::make_unique<VAsioTcpPeer>(_ioContext, this);
-
-    try
-    {
-        registry->Connect(registryInfo);
-    }
-    catch (const std::exception&)
-    {
-        std::cout
-            << "ERROR: Failed to connect to VAsio registry.\n"
-            << "    Make sure that the IbRegistry is up and running and is listening on port " << registryInfo.acceptorPort << "\n"
-            << "    Make sure that the hostname \"" << registryInfo.acceptorHost << "\" can be resolved and is reachable.\n"
-            << "    You can configure the IbRegistry hostname and port via the IbConfig.\n"
-            << "    The IbRegistry executable can be found in your IB installation folder:\n"
-            << "        INSTALL_DIR/bin/IbRegistry[.exe]"
-            << std::endl;
-        throw std::runtime_error{"ERROR: Failed to connect to VAsio registry"};
-    }
-
+    registry->Connect(std::move(registryInfo));
+    // FIXME: throw on connection failure!
     registry->StartAsyncRead();
 
     SendParticipantAnnoucement(registry.get());
@@ -153,14 +137,7 @@ void VAsioConnection::ReceiveKnownParticpants(MessageBuffer&& buffer)
             << std::endl;
 
         auto peer = std::make_unique<VAsioTcpPeer>(_ioContext, this);
-        try
-        {
-            peer->Connect(std::move(peerInfo));
-        }
-        catch (const std::exception&)
-        {
-            continue;
-        }
+        peer->Connect(std::move(peerInfo));
 
         // We connected to the other peer. tell him who we are.
         SendParticipantAnnoucement(peer.get());

@@ -4,7 +4,6 @@
 #include <future>
 
 #include "ib/cfg/string_utils.hpp"
-#include "ib/mw/logging/spdlog.hpp"
 #include "ib/mw/sync/string_utils.hpp"
 
 using namespace std::chrono_literals;
@@ -108,8 +107,8 @@ void ParticipantController::SetPeriod(std::chrono::nanoseconds period)
     if (_syncType != cfg::SyncType::TimeQuantum)
     {
         auto msPeriod = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(period);
-        _logger->warn("ParticipantController::SetPeriod({}ms) is ignored", msPeriod.count());
-        _logger->info("ParticipantController::SetPeriod() can only be used with SyncType::TimeQuantum (currently active: SyncType::{})", _syncType);
+        // FIXME@fmt: _logger->Warn("ParticipantController::SetPeriod({}ms) is ignored", msPeriod.count());
+        // FIXME@fmt: _logger->Info("ParticipantController::SetPeriod() can only be used with SyncType::TimeQuantum (currently active: SyncType::{})", _syncType);
     }
     _myNextTask.duration = period;
 }
@@ -158,7 +157,7 @@ auto ParticipantController::RunAsync() -> std::future<ParticipantState>
     }
     catch (const std::exception& e)
     {
-        _logger->critical(e.what());
+        _logger->Critical(e.what());
         throw;
     }
 
@@ -168,7 +167,7 @@ auto ParticipantController::RunAsync() -> std::future<ParticipantState>
 
 void ParticipantController::ReportError(std::string errorMsg)
 {
-    _logger->error(errorMsg);
+    _logger->Error(errorMsg);
     ChangeState(ParticipantState::Error, std::move(errorMsg));
 }
 
@@ -283,14 +282,14 @@ void ParticipantController::Shutdown(std::string reason)
 
 void ParticipantController::PrepareColdswap()
 {
-    _logger->info("preparing coldswap...");
+    _logger->Info("preparing coldswap...");
     ChangeState(ParticipantState::ColdswapPrepare, "Starting coldswap preparations");
 
     _comAdapter->OnAllMessagesDelivered([this]() {
 
         _comAdapter->FlushSendBuffers();
         ChangeState(ParticipantState::ColdswapReady, "Finished coldswap preparations.");
-        _logger->info("ready for coldswap...");
+        _logger->Info("ready for coldswap...");
 
     });
 }
@@ -341,23 +340,24 @@ void ParticipantController::LogCurrentPerformanceStats()
 
     if (_execTimeMonitor.SampleCount() == 0u)
     {
-        _logger->info("TotalTaskTime: -.--ms [-.--, -.--] \tWaitTime: -.--ms [-.--, -.--]  \tCpuTime: -.--ms, [-.--, -.--] \t(avg [min,max])");
+        _logger->Info("TotalTaskTime: -.--ms [-.--, -.--] \tWaitTime: -.--ms [-.--, -.--]  \tCpuTime: -.--ms, [-.--, -.--] \t(avg [min,max])");
     }
     else
     {
-        _logger->info("TotalTaskTime: {:.2f}ms [{:.2f}, {:.2f}] \tWaitTime: {:.2f}ms [{:.2f}, {:.2f}]  \tCpuTime: {:.2f}, [{:.2f}, {:.2f}] \t(avg [min,max])",
-            toMSecs(_execTimeMonitor.AvgDuration<DoubleMSecs>() + _waitTimeMonitor.AvgDuration<DoubleMSecs>()),
-            toMSecs(_execTimeMonitor.MinDuration() + _waitTimeMonitor.MinDuration()),
-            toMSecs(_execTimeMonitor.MaxDuration() + _waitTimeMonitor.MaxDuration()),
+        // FIXME@fmt:
+        //_logger->Info("TotalTaskTime: {:.2f}ms [{:.2f}, {:.2f}] \tWaitTime: {:.2f}ms [{:.2f}, {:.2f}]  \tCpuTime: {:.2f}, [{:.2f}, {:.2f}] \t(avg [min,max])",
+        //    toMSecs(_execTimeMonitor.AvgDuration<DoubleMSecs>() + _waitTimeMonitor.AvgDuration<DoubleMSecs>()),
+        //    toMSecs(_execTimeMonitor.MinDuration() + _waitTimeMonitor.MinDuration()),
+        //    toMSecs(_execTimeMonitor.MaxDuration() + _waitTimeMonitor.MaxDuration()),
 
-            toMSecs(_waitTimeMonitor.AvgDuration<DoubleMSecs>()),
-            toMSecs(_waitTimeMonitor.MinDuration()),
-            toMSecs(_waitTimeMonitor.MaxDuration()),
+        //    toMSecs(_waitTimeMonitor.AvgDuration<DoubleMSecs>()),
+        //    toMSecs(_waitTimeMonitor.MinDuration()),
+        //    toMSecs(_waitTimeMonitor.MaxDuration()),
 
-            toMSecs(_execTimeMonitor.AvgDuration<DoubleMSecs>()),
-            toMSecs(_execTimeMonitor.MinDuration()),
-            toMSecs(_execTimeMonitor.MaxDuration())
-        );
+        //    toMSecs(_execTimeMonitor.AvgDuration<DoubleMSecs>()),
+        //    toMSecs(_execTimeMonitor.MinDuration()),
+        //    toMSecs(_execTimeMonitor.MaxDuration())
+        //);
     }
 }
 
@@ -416,7 +416,7 @@ void ParticipantController::ReceiveIbMessage(ib::mw::EndpointAddress /*from*/, c
     case SystemCommand::Kind::Stop:
         if (State() == ParticipantState::Stopped)
         {
-            _logger->warn("Received SystemCommand::Stop, but ignored since already ParticipantState::Stopped");
+            _logger->Warn("Received SystemCommand::Stop, but ignored since already ParticipantState::Stopped");
             return;
         }
         else if (State() == ParticipantState::Running)
@@ -562,40 +562,9 @@ void ParticipantController::ReceiveIbMessage(mw::EndpointAddress /*from*/, const
 
 void ParticipantController::ReceiveIbMessage(mw::EndpointAddress from, const NextSimTask& task)
 {
-    if (from == _endpointAddress) return;
-
     _otherNextTasks[from.participant] = task;
-
-    switch (State())
-    {
-        // QuantumGrant during initialization are considered as an error
-    case ParticipantState::Invalid:      // [[fallthrough]]
-    case ParticipantState::Idle:         // [[fallthrough]]
-    case ParticipantState::Initializing: // [[fallthrough]]
-    case ParticipantState::Initialized:
-        return;
-
-    case ParticipantState::Paused:
-        // We have to process QuantumGrants received in Paused. This can happen
-        // due to race conditions, and we can't undo a TICK. It should not occur
-        // more than once though.
-        // [[fallthrough]]
-    case ParticipantState::Running:
+    if (task.timePoint >= _myNextTask.timePoint)
         CheckDistributedTimeAdvanceGrant();
-        return;
-
-        // QuantumGrant during stop/shutdown procedure and Errors are ignored
-    case ParticipantState::Stopping:     // [[fallthrough]]
-    case ParticipantState::Stopped:      // [[fallthrough]]
-    case ParticipantState::Error:        // [[fallthrough]]
-    case ParticipantState::ShuttingDown: // [[fallthrough]]
-    case ParticipantState::Shutdown:     // [[fallthrough]]
-        return;
-
-    default:
-        ReportError("Received NextSimTask in state ParticipantState::" + to_string(State()));
-        return;
-    }
 }
 
 void ParticipantController::SendTickDone() const
@@ -663,30 +632,29 @@ void ParticipantController::SendNextSimTask()
         _comAdapter->OnAllMessagesDelivered([this]() {
 
             SendIbMessage(_myNextTask);
+            CheckDistributedTimeAdvanceGrant();
 
         });
     }
     else
     {
         SendIbMessage(_myNextTask);
+        CheckDistributedTimeAdvanceGrant();
     }
 }
 
 void ParticipantController::CheckDistributedTimeAdvanceGrant()
 {
-    while (true)
+    for (auto&& otherTask : _otherNextTasks)
     {
-        for (auto&& otherTask : _otherNextTasks)
-        {
-            if (_myNextTask.timePoint > otherTask.second.timePoint)
-                return;
-        }
-
-        // No SimTask has a lower timePoint
-        _currentTask = _myNextTask;
-        _myNextTask.timePoint = _currentTask.timePoint + _currentTask.duration;
-        ExecuteSimTask();
+        if (_myNextTask.timePoint > otherTask.second.timePoint)
+            return;
     }
+
+    // No SimTask has a lower timePoint
+    _currentTask = _myNextTask;
+    _myNextTask.timePoint = _currentTask.timePoint + _currentTask.duration;
+    ExecuteSimTask();
 }
 
 void ParticipantController::ExecuteSimTask()
