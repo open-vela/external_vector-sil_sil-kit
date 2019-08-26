@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include <iomanip>
-#include <sstream>
 
 using namespace asio::ip;
 
@@ -83,17 +82,11 @@ void VAsioTcpPeer::Connect(VAsioPeerInfo peerInfo)
         }
     }
 
-    // FIXME: replace with fmt call
-    std::stringstream errorMsgBuilder;
-    errorMsgBuilder << "ERROR: failed to connect to host " << GetInfo().acceptorHost;
-    auto errorMsg = errorMsgBuilder.str();
-
-    std::cerr << errorMsg << ". Tried the following addresses:\n";
+    std::cerr << "ERROR: failed to connect to host " << GetInfo().acceptorHost << ". Tried the following addresses:\n";
     for (auto&& resolverEntry : resolverResults)
     {
         std::cerr << " - " << tcp::endpoint{resolverEntry} << "\n";
     }
-    throw std::runtime_error{errorMsg};
 }
 
 void VAsioTcpPeer::SendIbMsg(MessageBuffer buffer)

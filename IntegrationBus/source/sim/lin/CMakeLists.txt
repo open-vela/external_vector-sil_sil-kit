@@ -3,6 +3,8 @@ add_library(IbSimLin STATIC
     LinController.hpp
     LinControllerProxy.cpp
     LinControllerProxy.hpp
+    LinDatatypeUtils.cpp
+    LinDatatypeUtils.hpp
 )
 
 target_include_directories(IbSimLin
@@ -11,14 +13,7 @@ target_include_directories(IbSimLin
 
 target_link_libraries(IbSimLin
     PRIVATE IbInterface
+    IbMwLogging
 )
 
-add_vib_test(TestSimLin
-    SOURCES
-        LinTestUtils.hpp
-        LinControllerTest.cpp
-        LinControllerProxyTest.cpp
-    LIBS
-        IbSimLin
-        IbMwMockComAdapter
-)
+add_vib_test(TestSimLinController SOURCES LinControllerTest.cpp LinControllerProxyTest.cpp LIBS IbSimLin IbMwMockComAdapter)
